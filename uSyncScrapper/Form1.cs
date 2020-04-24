@@ -95,77 +95,73 @@ namespace uSyncScrapper
                 allCompositionsDocuments.Add(XDocument.Load(compositionsFile));
             }
 
+            allCompositionsDocuments = allCompositionsDocuments
+                .Where(c => c.Root.Name != "Empty")
+                .Where(c => !compositionAliasToIgnore.Contains(c
+                    .Root
+                    .Attribute("Alias")
+                    .Value)).ToList();
+
             int index = 1;
             foreach (var file in allPages)
             {
-                try
-                {
-                    var docType = new DocumentType();
-                    XDocument doc = XDocument.Load(file);
+                var docType = new DocumentType();
+                XDocument doc = XDocument.Load(file);
 
-                    var name = doc
-                        .Root
-                        .Element("Info")
-                        .Element("Name")
-                        .Value;
-                    docType.Name = name;
+                if (doc.Root.Name == "Empty") { continue; }
 
-                    var alias = doc
-                       .Root
-                       .Element("Info")
-                       .Element("Alias")
-                       .Value;
-                    docType.Alias = alias;
-                    if (docTypesToIgnore.Any(i => i == alias)) { continue; }
+                var name = doc
+                    .Root
+                    .Element("Info")
+                    .Element("Name")
+                    .Value;
+                docType.Name = name;
 
-                    var childDocTypes = doc
-                        .Root
-                        .Element("Structure")
-                        .Elements("DocumentType")
-                        .Select(i => i.Value);
-                    docType.ChildDocTypes = childDocTypes;
+                var alias = doc
+                   .Root
+                   .Attribute("Alias")
+                   .Value;
+                docType.Alias = alias;
+                if (docTypesToIgnore.Any(i => i == alias)) { continue; }
 
-                    var description = doc
-                        .Root
-                        .Element("Info")
-                        .Element("Description")
-                        .Value;
-                    docType.Description = description;
+                var childDocTypes = doc
+                    .Root
+                    .Element("Structure")
+                    .Elements("ContentType")
+                    .Select(i => i.Value);
+                docType.ChildDocTypes = childDocTypes;
 
-                    docType.Folder = doc
-                        .Root
-                        .Element("Info")
-                        .Element("Folder")?
-                        .Value;
+                var description = doc
+                    .Root
+                    .Element("Info")
+                    .Element("Description")
+                    .Value;
+                docType.Description = description;
 
-                    var compositionsDocuments = GetCompositions(allCompositionsDocuments, doc);
+                var compositionsDocuments = GetCompositions(allCompositionsDocuments, doc);
 
-                    var allTabs = new List<Tab>();
-                    allTabs.AddRange(GetTabs(doc));
-                    allTabs.AddRange(GetCompositionsTabs(compositionsDocuments));
-                    allTabs = allTabs.OrderBy(i => i.Order).ToList();
+                var allTabs = new List<Tab>();
+                allTabs.AddRange(GetTabs(doc));
+                allTabs.AddRange(GetCompositionsTabs(compositionsDocuments));
+                allTabs = allTabs.OrderBy(i => i.Order).ToList();
 
-                    var allProperties = new List<DocumentTypeProperty>();
-                    allProperties.AddRange(GetCompositionsProperties(compositionsDocuments, doc));
-                    allProperties.AddRange(GetDocumentProperties(doc));
+                var allProperties = new List<DocumentTypeProperty>();
+                allProperties.AddRange(GetCompositionsProperties(compositionsDocuments, doc));
+                allProperties.AddRange(GetDocumentProperties(doc));
 
-                    allProperties = allProperties
-                        .OrderBy(p => allTabs.IndexOf(allTabs.First(t => t.Caption == p.Tab)))
-                        .ThenBy(i => i.Order)
-                        .ToList();
-                    docType.Properties = allProperties;
+                allProperties = allProperties
+                    .OrderBy(p => allTabs.IndexOf(allTabs.First(t => t.Caption == p.Tab)))
+                    .ThenBy(i => i.Order)
+                    .ToList();
+                docType.Properties = allProperties;
 
-                    ComputeNestedContentProperties(dataTypeDocuments, allProperties);
-                    ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
+                ComputeNestedContentProperties(dataTypeDocuments, allProperties);
+                ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
 
-                    if (!docType.Properties.Any()) { continue; }
-                    contentTypes.Add(docType);
-                    docType.Index = index;
-                    index++;
-                }
-                catch (Exception ex)
-                {
-                }
+                if (!docType.Properties.Any()) { continue; }
+                contentTypes.Add(docType);
+                docType.Index = index;
+                index++;
             }
 
             // figure out parent doc types
@@ -208,7 +204,7 @@ namespace uSyncScrapper
                 }
             }
 
-            return contentTypes.Where(i => !i.Folder.Contains("nested", StringComparison.OrdinalIgnoreCase)).ToList();
+            return contentTypes.ToList();
         }
 
         private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
@@ -232,23 +228,19 @@ namespace uSyncScrapper
 
         private IEnumerable<XDocument> GetCompositions(List<XDocument> compositionsDocuments, XDocument doc)
         {
-            var compositions = doc
+            var compositionKeys = doc
                     .Root
                     .Element("Info")
                     .Element("Compositions")
                     .Elements("Composition")
-                    .Select(i => (string)i.Attribute("Key"))
-                    .Select(i => compositionsDocuments.Where(j => j
+                    .Select(i => (string)i.Attribute("Key"));
+
+            var compositions = compositionsDocuments
+                    .Where(i => compositionKeys.Contains(i
                         .Root
-                        .Element("Info")
-                        .Element("Key")
-                        .Value == i).FirstOrDefault())
-                    .Where(c => c != null)
-                    .Where(c => !compositionAliasToIgnore.Contains(c
-                        .Root
-                        .Element("Info")
-                        .Element("Alias")
+                        .Attribute("Key")
                         .Value));
+
             return compositions;
         }
 
@@ -326,15 +318,12 @@ namespace uSyncScrapper
                     .Value == prop.Definition).FirstOrDefault();
                 if (datatype != null)
                 {
-                    var maxItems = datatype
+                    var maxItems = JsonConvert.DeserializeObject<DataTypeConfig>(datatype
                         .Root
-                        .Element("PreValues")
-                        .Elements("PreValue")
-                        .FirstOrDefault(i => (string)i.Attribute("Alias") == "maxNumber")
-                        .Value;
-                    var maxItemsDefault = 0;
-                    int.TryParse(maxItems, out maxItemsDefault);
-                    prop.MaxItems = maxItemsDefault;
+                        .Element("Config")
+                        .Value).MaxNumber;
+
+                    prop.MaxItems = maxItems;
                 }
             }
         }

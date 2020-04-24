@@ -15,6 +15,5 @@ namespace uSyncScrapper.Models
         public IEnumerable<DocumentTypeProperty> Properties { get; set; }
         public IEnumerable<string> ParentDocTypes { get; set; }
         public IEnumerable<string> ChildDocTypes { get; set; }
-        public string Folder { get; internal set; }
     }
 }
