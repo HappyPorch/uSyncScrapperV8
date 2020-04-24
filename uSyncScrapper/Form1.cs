@@ -96,11 +96,6 @@ namespace uSyncScrapper
                 allCompositionsDocuments.Add(XDocument.Load(compositionsFile));
             }
 
-            foreach (var compositionsFile in compositionsFiles)
-            {
-                allCompositionsDocuments.Add(XDocument.Load(compositionsFile));
-            }
-
             allCompositionsDocuments = allCompositionsDocuments
                 .Where(c => c.Root.Name != "Empty")
                 .Where(c => !compositionAliasToIgnore.Contains(c
