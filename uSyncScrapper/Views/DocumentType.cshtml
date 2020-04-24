@@ -61,6 +61,7 @@
                     "There is no limit on the number of items that can be added.")
                     : "";
                     var hasNestedContentDocTypes = item.NestedContentDocTypes != null && item.NestedContentDocTypes.Any();
+                    var hasModules = item.NestedContentElementsDocTypes != null && item.NestedContentElementsDocTypes.Any();
                     <li>
                         <span class="property-title">@item.Name:</span> @text @maxItemsText
                         @if (hasNestedContentDocTypes)
@@ -88,6 +89,17 @@
                                             }
                                         </ul>
                                     }
+                                </li>
+                            }
+                        </ul>
+                    }
+                    if (hasModules)
+                    {
+                        <ul>
+                            @foreach (var i in item.NestedContentElementsDocTypes)
+                            {
+                                <li>
+                                    <span class="property-title">@i.Name</span>
                                 </li>
                             }
                         </ul>
