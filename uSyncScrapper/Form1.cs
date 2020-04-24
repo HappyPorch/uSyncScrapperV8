@@ -16,11 +16,12 @@ namespace uSyncScrapper
 {
     public partial class Form1 : Form
     {
-        private string[] compositionAliasToIgnore = new string[] { "sEOComposition", "visibilityComposition", 
+        private string[] compositionAliasToIgnore = new string[] { "sEOComposition", "visibilityComposition",
             "redirectComposition", "markupComposition", "allowDeleteComposition", "auxiliaryFoldersComposition", "bodyClassComposition" };
-
         private string[] docTypesToIgnore = new string[] { "errorPage" };
 
+        private const string nestedContentTypeName = "Umbraco.NestedContent";
+        private const string nestedContentElementsTypeName = "Umbraco.NestedContentElements";
         public Form1()
         {
             InitializeComponent();
@@ -57,8 +58,6 @@ namespace uSyncScrapper
         private IEnumerable<DocumentType> ParseUSyncFiles(string folder)
         {
             //pages
-            var contentTypes = new List<DocumentType>();
-
             string uSyncFolder = Directory
                 .GetDirectories(folder, "uSync", SearchOption.AllDirectories)
                 .First(i => Directory.GetDirectories(i, "v8", SearchOption.AllDirectories).Count() > 0);
@@ -97,6 +96,11 @@ namespace uSyncScrapper
                 allCompositionsDocuments.Add(XDocument.Load(compositionsFile));
             }
 
+            foreach (var compositionsFile in compositionsFiles)
+            {
+                allCompositionsDocuments.Add(XDocument.Load(compositionsFile));
+            }
+
             allCompositionsDocuments = allCompositionsDocuments
                 .Where(c => c.Root.Name != "Empty")
                 .Where(c => !compositionAliasToIgnore.Contains(c
@@ -104,7 +108,18 @@ namespace uSyncScrapper
                     .Attribute("Alias")
                     .Value)).ToList();
 
+            //blueprints
+            string blueprintsFolder = Directory
+                        .GetDirectories(uSyncFolder, "Blueprints", SearchOption.AllDirectories)
+                        .First();
+            var blueprintsFiles = Directory.GetFiles(blueprintsFolder, "*.config", SearchOption.AllDirectories);
+            var blueprintsDocuments = blueprintsFiles
+                        .Select(i => XDocument.Load(i))
+                        .ToList();
+
             int index = 1;
+            var pageContentTypes = new List<DocumentType>();
+
             foreach (var file in allPages)
             {
                 var docType = new DocumentType();
@@ -157,29 +172,30 @@ namespace uSyncScrapper
                     .ToList();
                 docType.Properties = allProperties;
 
-                ComputeNestedContentProperties(dataTypeDocuments, allProperties);
+                ComputeNestedContentProperties(docType, dataTypeDocuments);
+                ComputeNestedContentElementsProperties(docType, dataTypeDocuments, blueprintsDocuments);
                 ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
 
                 if (!docType.Properties.Any()) { continue; }
-                contentTypes.Add(docType);
+                pageContentTypes.Add(docType);
                 docType.Index = index;
                 index++;
             }
 
             // figure out parent doc types
-            foreach (var docType in contentTypes)
+            foreach (var docType in pageContentTypes)
             {
-                var parentDocTypes = contentTypes.Where(i => i.ChildDocTypes.Contains(docType.Alias));
+                var parentDocTypes = pageContentTypes.Where(i => i.ChildDocTypes.Contains(docType.Alias));
                 docType.ParentDocTypes = parentDocTypes.Select(i => i.Name).ToList();
             }
 
             // move child doc types alias to names
-            foreach (var docType in contentTypes)
+            foreach (var docType in pageContentTypes)
             {
                 var childDocTypesNames = new List<string>();
                 foreach (var childAlias in docType.ChildDocTypes)
                 {
-                    var name = contentTypes.FirstOrDefault(i => i.Alias == childAlias)?.Name;
+                    var name = pageContentTypes.FirstOrDefault(i => i.Alias == childAlias)?.Name;
                     if (!string.IsNullOrEmpty(name))
                     {
                         childDocTypesNames.Add(name);
@@ -189,7 +205,7 @@ namespace uSyncScrapper
             }
 
             // fill nested content properties
-            foreach (var docType in contentTypes)
+            foreach (var docType in pageContentTypes)
             {
                 foreach (var prop in docType.Properties)
                 {
@@ -198,7 +214,7 @@ namespace uSyncScrapper
                         var nestedContentList = new List<NestedContentDocType>();
                         foreach (var nestedContentDocType in prop.NestedContentDocTypes)
                         {
-                            nestedContentDocType.Properties = contentTypes.FirstOrDefault(i => i.Alias == nestedContentDocType.Alias)?.Properties.ToList();
+                            nestedContentDocType.Properties = pageContentTypes.FirstOrDefault(i => i.Alias == nestedContentDocType.Alias)?.Properties.ToList();
                             nestedContentList.Add(nestedContentDocType);
                         }
                         prop.NestedContentDocTypes = nestedContentList;
@@ -206,7 +222,7 @@ namespace uSyncScrapper
                 }
             }
 
-            return contentTypes.ToList();
+            return pageContentTypes.ToList();
         }
 
         private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
@@ -266,14 +282,19 @@ namespace uSyncScrapper
                     .Element("GenericProperties")
                     .Elements("GenericProperty")
                     .Where(i => checkBoxIncludePropertiesWithoutDescription.Checked ? true : !string.IsNullOrEmpty(i.Element("Description").Value))
-                    .Select(i => new DocumentTypeProperty { Name = i.Element("Name").Value, Text = i.Element("Description").Value, Tab = i.Element("Tab").Value, Order = int.Parse(i.Element("SortOrder").Value), Type = i.Element("Type").Value, Definition = i.Element("Definition").Value });
+                    .Select(i => new DocumentTypeProperty { Name = i.Element("Name").Value, Alias = i.Element("Alias").Value, Text = i.Element("Description").Value, Tab = i.Element("Tab").Value, Order = int.Parse(i.Element("SortOrder").Value), Type = i.Element("Type").Value, Definition = i.Element("Definition").Value });
             return properties;
         }
 
-        private void ComputeNestedContentProperties(List<XDocument> dataTypeDocuments, List<DocumentTypeProperty> properties)
+        /// <summary>
+        /// Fills in nested Content properties of a doc type.
+        /// </summary>
+        /// <param name="docType"></param>
+        /// <param name="dataTypeDocuments"></param>
+        private void ComputeNestedContentProperties(DocumentType docType, IEnumerable<XDocument> dataTypeDocuments)
         {
-            var nestedContentProperties = properties
-                                    .Where(i => i.Type == "Umbraco.NestedContent");
+            var nestedContentProperties = docType.Properties
+                                    .Where(i => i.Type == nestedContentTypeName);
 
             foreach (var prop in nestedContentProperties)
             {
@@ -305,6 +326,41 @@ namespace uSyncScrapper
                     prop.NestedContentDocTypes = deserializedContentTypes.Select(i => new NestedContentDocType { Alias = i.ncAlias, Name = i.nameTemplate });
                 }
             }
+        }
+
+        private void ComputeNestedContentElementsProperties(DocumentType docType, IEnumerable<XDocument> dataTypeDocuments, IEnumerable<XDocument> blueprintDocuments)
+        {
+            var properties = docType.Properties
+                                    .Where(i => i.Type == nestedContentElementsTypeName);
+
+            if (!properties.Any()) { return; }
+
+            //find blueprint for this contenttype
+            var blueprint = blueprintDocuments
+                .Where(i => i
+                    .Root
+                    .Element("Info")
+                    .Element("ContentType")
+                    .Value == docType.Alias)
+                .SingleOrDefault();
+
+            if (blueprint == null) { return; }
+
+            //find modules set on blueprint for this contenttype and this property
+            foreach (var property in properties)
+            {
+                var modules = JsonConvert.DeserializeObject<IEnumerable<Module>>(blueprint
+                    .Root
+                    .Element("Properties")
+                    .Element(property.Alias)
+                    .Elements("Value")
+                    .FirstOrDefault()?
+                    .Value?
+                    .ToString());
+
+                property.NestedContentElementsDocTypes = modules;
+            }
+
         }
 
         private void ComputeTreePickerMaxItems(List<XDocument> dataTypeDocuments, List<DocumentTypeProperty> properties)
