@@ -63,7 +63,7 @@
             this.textBox1.Name = "textBox1";
             this.textBox1.Size = new System.Drawing.Size(468, 22);
             this.textBox1.TabIndex = 2;
-            this.textBox1.Text = "E:\\Projects\\QHotels\\website\\QHotels.Web";
+            this.textBox1.Text = "E:\\Projects\\princesa-plaza\\website\\PrincesaPlaza.Web";
             // 
             // checkBoxIncludePropertiesWithoutDescription
             // 
