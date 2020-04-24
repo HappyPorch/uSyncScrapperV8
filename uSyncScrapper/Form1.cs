@@ -42,8 +42,8 @@ namespace uSyncScrapper
 
         private void ParseUSyncfilesToHtml(string folder)
         {
-            var docTypes = ParseUSyncFiles(folder);
-            var html = GenerateHtml(docTypes);
+            var result = ParseUSyncFiles(folder);
+            var html = GenerateHtml(result.Item1, result.Item2);
             SaveFileDialog dlg = new SaveFileDialog();
             dlg.Filter = "Html Files (*.html)|*.html";
             dlg.DefaultExt = "html";
@@ -55,7 +55,7 @@ namespace uSyncScrapper
             textBoxResults.AppendText(Environment.NewLine + "Done");
         }
 
-        private IEnumerable<DocumentType> ParseUSyncFiles(string folder)
+        private Tuple<IEnumerable<DocumentType>, IEnumerable<Module>> ParseUSyncFiles(string folder)
         {
             //pages
             string uSyncFolder = Directory
@@ -217,7 +217,16 @@ namespace uSyncScrapper
                 }
             }
 
-            return pageContentTypes.ToList();
+            var allModules = pageContentTypes
+                    .SelectMany(i => i.Properties)
+                    .Where(i => i.NestedContentElementsDocTypes != null && i.NestedContentElementsDocTypes.Any())
+                    .SelectMany(i => i.NestedContentElementsDocTypes)
+                    .GroupBy(i => i.Name)
+                    .Select(g => g.First())
+                    .OrderBy(i => i.Name)
+                    .ToList();
+
+            return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(pageContentTypes, allModules);
         }
 
         private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
@@ -381,21 +390,34 @@ namespace uSyncScrapper
             }
         }
 
-        private string GenerateHtml(IEnumerable<DocumentType> docTypes)
+        private string GenerateHtml(IEnumerable<DocumentType> docTypes, IEnumerable<Module> modules)
         {
             string documentTypeFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "DocumentType.cshtml");
+            string moduleFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "Module.cshtml");
             string finalDocumentFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "FinalDocument.cshtml");
 
             var templateService = new TemplateService();
             templateService.AddNamespace("uSyncScrapper.Models");
-            var body = new StringBuilder();
+            var docTypeBody = new StringBuilder();
+            var modulesBody = new StringBuilder();
 
             foreach (var docType in docTypes)
             {
-                body.Append(templateService.Parse(File.ReadAllText(documentTypeFilePath), docType, null, "DocumentType"));
+                docTypeBody.Append(templateService.Parse(File.ReadAllText(documentTypeFilePath), docType, null, "DocumentType"));
             }
 
-            var finalDocType = new FinalDocument { Body = body.ToString(), DocTypes = docTypes };
+            foreach (var module in modules)
+            {
+                modulesBody.Append(templateService.Parse(File.ReadAllText(moduleFilePath), module, null, "Module"));
+            }
+
+            var finalDocType = new FinalDocument
+            {
+                DocTypesBody = docTypeBody.ToString(),
+                DocTypes = docTypes,
+                ModulesBody = modulesBody.ToString(),
+                Modules = modules
+            };
             var finalDocument = templateService.Parse(File.ReadAllText(finalDocumentFilePath), finalDocType, null, "FinalDocument");
 
             return WebUtility.HtmlDecode(finalDocument);

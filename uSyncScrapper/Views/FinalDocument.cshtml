@@ -92,11 +92,24 @@
                 }
             </ul>
         </li>
+        <li>
+            <p><a href="#modules">Modules</a></p>
+            <ul>
+                @foreach (var item in Model.Modules)
+                {
+                    <li><a href="#@item.Key">@item.Name</a></li>
+                }
+            </ul>
+        </li>
     </ul>
 
     <br />
     <h2 id="documentTypesAndTemplates">Document types and templates</h2>
-    @Model.Body
+    @Model.DocTypesBody
+
+    <br />
+    <h2 id="modules">Modules</h2>
+    @Model.ModulesBody
 
 </body>
 </html>
