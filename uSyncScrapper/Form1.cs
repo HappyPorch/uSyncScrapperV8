@@ -16,7 +16,8 @@ namespace uSyncScrapper
 {
     public partial class Form1 : Form
     {
-        private string[] compositionAliasToIgnore = new string[] { "seo", "visibility", "redirect" };
+        private string[] compositionAliasToIgnore = new string[] { "sEOComposition", "visibilityComposition", 
+            "redirectComposition", "markupComposition", "allowDeleteComposition", "auxiliaryFoldersComposition", "bodyClassComposition" };
 
         private string[] docTypesToIgnore = new string[] { "errorPage" };
 
