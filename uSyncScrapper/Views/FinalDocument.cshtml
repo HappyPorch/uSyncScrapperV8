@@ -13,7 +13,7 @@
 
         body {
             padding: 40px;
-            color:#333;
+            color: #333;
         }
 
         h1 {
@@ -37,34 +37,41 @@
 
         h5 {
             font-size: 0.9em;
-            margin:0;
+            margin: 0;
         }
 
         p.date {
             text-align: center;
             color: #999999;
         }
+
         p.property {
             margin-top: 0.2em;
         }
+
         .grey {
-            color:lightgrey;
+            color: lightgrey;
         }
+
         .property-title {
-            font-weight:bold;
+            font-weight: bold;
         }
+
         li {
             margin-bottom: 0.6em;
         }
+
         .doctype-tab {
             margin-bottom: 1.3em;
         }
-        .doctype-tab  ul {
-            margin-top: 0.6em;
-        }
-        .doctype-tab > span {
-            font-weight: bold;
-        }
+
+            .doctype-tab ul {
+                margin-top: 0.6em;
+            }
+
+            .doctype-tab > span {
+                font-weight: bold;
+            }
     </style>
 </head>
 <body>
@@ -76,13 +83,19 @@
     <h2>Contents</h2>
 
     <ul>
-        @foreach (var item in Model.DocTypes)
-        {
-            <li><a href="#@item.Name">@item.Name</a></li>
-        }
+        <li>
+            <p><a href="#documentTypesAndTemplates">Document types and templates</a></p>
+            <ul>
+                @foreach (var item in Model.DocTypes)
+                {
+                    <li><a href="#@item.Name">@item.Name</a></li>
+                }
+            </ul>
+        </li>
     </ul>
+
     <br />
-    <h2>Document types and templates</h2>
+    <h2 id="documentTypesAndTemplates">Document types and templates</h2>
     @Model.Body
 
 </body>

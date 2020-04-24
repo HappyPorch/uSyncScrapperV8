@@ -50,6 +50,7 @@ namespace uSyncScrapper
             {
                 File.WriteAllText(dlg.FileName, html);
             }
+            textBoxResults.AppendText(Environment.NewLine + "Done");
         }
 
         private IEnumerable<DocumentType> ParseUSyncFiles(string folder)

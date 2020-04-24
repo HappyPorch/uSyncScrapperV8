@@ -34,6 +34,7 @@
             this.buttonScrap = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.checkBoxIncludePropertiesWithoutDescription = new System.Windows.Forms.CheckBox();
+            this.textBoxResults = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // buttonBrowseFolder
@@ -49,7 +50,7 @@
             // 
             // buttonScrap
             // 
-            this.buttonScrap.Location = new System.Drawing.Point(524, 62);
+            this.buttonScrap.Location = new System.Drawing.Point(525, 256);
             this.buttonScrap.Name = "buttonScrap";
             this.buttonScrap.Size = new System.Drawing.Size(75, 38);
             this.buttonScrap.TabIndex = 1;
@@ -77,11 +78,23 @@
             this.checkBoxIncludePropertiesWithoutDescription.Text = "Include properties without description";
             this.checkBoxIncludePropertiesWithoutDescription.UseVisualStyleBackColor = true;
             // 
+            // textBoxResults
+            // 
+            this.textBoxResults.Location = new System.Drawing.Point(12, 81);
+            this.textBoxResults.Multiline = true;
+            this.textBoxResults.Name = "textBoxResults";
+            this.textBoxResults.ReadOnly = true;
+            this.textBoxResults.Size = new System.Drawing.Size(587, 167);
+            this.textBoxResults.TabIndex = 4;
+            this.textBoxResults.Text = "Assumes all pages have a *page suffix. Assumes all compositions have a *compositi" +
+    "on suffix.";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(609, 109);
+            this.ClientSize = new System.Drawing.Size(609, 304);
+            this.Controls.Add(this.textBoxResults);
             this.Controls.Add(this.checkBoxIncludePropertiesWithoutDescription);
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.buttonScrap);
@@ -101,6 +114,7 @@
         private System.Windows.Forms.Button buttonScrap;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.CheckBox checkBoxIncludePropertiesWithoutDescription;
+        private System.Windows.Forms.TextBox textBoxResults;
     }
 }
 
