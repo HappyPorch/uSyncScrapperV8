@@ -65,16 +65,16 @@ namespace uSyncScrapper
             string documentTypeFolder = Directory
                         .GetDirectories(uSyncFolder, "ContentTypes", SearchOption.AllDirectories)
                         .First();
-            var allContentTypes = Directory.GetFiles(documentTypeFolder, "*.config", SearchOption.AllDirectories);
+            var allContentTypesFiles = Directory.GetFiles(documentTypeFolder, "*.config", SearchOption.AllDirectories);
 
-            var allPages = allContentTypes.Where(i => i.EndsWith("page.config"));
-            //var nestedContent = Directory.GetFiles(documentTypeFolder, "*.config", SearchOption.AllDirectories);
+            //var allPages = allContentTypesFiles.Where(i => i.EndsWith("page.config"));
+            ////var nestedContent = Directory.GetFiles(documentTypeFolder, "*.config", SearchOption.AllDirectories);
 
-            //show home pages first
-            allPages = allPages.Select(p => new { page = p, sort = p.Contains("home", StringComparison.OrdinalIgnoreCase) ? 1 : 0 })
-                .OrderByDescending(p => p.sort)
-                .Select(p => p.page)
-                .ToArray();
+            ////show home pages first
+            //allPages = allPages.Select(p => new { page = p, sort = p.Contains("home", StringComparison.OrdinalIgnoreCase) ? 1 : 0 })
+            //    .OrderByDescending(p => p.sort)
+            //    .Select(p => p.page)
+            //    .ToArray();
 
             //datatypes
             string datatypeFolder = Directory
@@ -89,7 +89,7 @@ namespace uSyncScrapper
             }
 
             //compositions
-            var compositionsFiles = allContentTypes.Where(i => i.EndsWith("composition.config"));
+            var compositionsFiles = allContentTypesFiles.Where(i => i.EndsWith("composition.config"));
             var allCompositionsDocuments = new List<XDocument>();
             foreach (var compositionsFile in compositionsFiles)
             {
@@ -113,9 +113,9 @@ namespace uSyncScrapper
                         .ToList();
 
             int index = 1;
-            var pageContentTypes = new List<DocumentType>();
+            var allContentTypes = new List<DocumentType>();
 
-            foreach (var file in allPages)
+            foreach (var file in allContentTypesFiles)
             {
                 var docType = new DocumentType();
                 XDocument doc = XDocument.Load(file);
@@ -171,26 +171,27 @@ namespace uSyncScrapper
                 ComputeNestedContentElementsProperties(docType, dataTypeDocuments, blueprintsDocuments);
                 ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
 
+
                 if (!docType.Properties.Any()) { continue; }
-                pageContentTypes.Add(docType);
+                allContentTypes.Add(docType);
                 docType.Index = index;
                 index++;
             }
 
             // figure out parent doc types
-            foreach (var docType in pageContentTypes)
+            foreach (var docType in allContentTypes)
             {
-                var parentDocTypes = pageContentTypes.Where(i => i.ChildDocTypes.Contains(docType.Alias));
+                var parentDocTypes = allContentTypes.Where(i => i.ChildDocTypes.Contains(docType.Alias));
                 docType.ParentDocTypes = parentDocTypes.Select(i => i.Name).ToList();
             }
 
             // move child doc types alias to names
-            foreach (var docType in pageContentTypes)
+            foreach (var docType in allContentTypes)
             {
                 var childDocTypesNames = new List<string>();
                 foreach (var childAlias in docType.ChildDocTypes)
                 {
-                    var name = pageContentTypes.FirstOrDefault(i => i.Alias == childAlias)?.Name;
+                    var name = allContentTypes.FirstOrDefault(i => i.Alias == childAlias)?.Name;
                     if (!string.IsNullOrEmpty(name))
                     {
                         childDocTypesNames.Add(name);
@@ -200,7 +201,7 @@ namespace uSyncScrapper
             }
 
             // fill nested content properties
-            foreach (var docType in pageContentTypes)
+            foreach (var docType in allContentTypes)
             {
                 foreach (var prop in docType.Properties)
                 {
@@ -209,15 +210,22 @@ namespace uSyncScrapper
                         var nestedContentList = new List<NestedContentDocType>();
                         foreach (var nestedContentDocType in prop.NestedContentDocTypes)
                         {
-                            nestedContentDocType.Properties = pageContentTypes.FirstOrDefault(i => i.Alias == nestedContentDocType.Alias)?.Properties.ToList();
+                            nestedContentDocType.Properties = allContentTypes.FirstOrDefault(i => i.Alias == nestedContentDocType.Alias)?.Properties.ToList();
                             nestedContentList.Add(nestedContentDocType);
                         }
                         prop.NestedContentDocTypes = nestedContentList;
                     }
+                    else if (prop.NestedContentElementsDocTypes != null && prop.NestedContentElementsDocTypes.Any())
+                    {
+                        foreach (var item in prop.NestedContentElementsDocTypes)
+                        {
+                            item.ContentType = allContentTypes.First(i => i.Name == item.Name);
+                        }
+                    }
                 }
             }
 
-            var allModules = pageContentTypes
+            var allModules = allContentTypes
                     .SelectMany(i => i.Properties)
                     .Where(i => i.NestedContentElementsDocTypes != null && i.NestedContentElementsDocTypes.Any())
                     .SelectMany(i => i.NestedContentElementsDocTypes)
@@ -226,7 +234,7 @@ namespace uSyncScrapper
                     .OrderBy(i => i.Name)
                     .ToList();
 
-            return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(pageContentTypes, allModules);
+            return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(allContentTypes, allModules);
         }
 
         private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
@@ -422,6 +430,8 @@ namespace uSyncScrapper
 
             return WebUtility.HtmlDecode(finalDocument);
         }
+
+        private bool IsPage(string alias) => alias.EndsWith("page.config");
 
     }
 }

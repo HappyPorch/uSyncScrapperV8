@@ -2,8 +2,72 @@
 @using uSyncScrapper.Models
 @using uSyncScrapper.Extensions
 
+
 <h3><a name="@Model.Link">@Model.Name</a> <span class="grey">module</span></h3>
 
 <br />
 <span class="property-title">Properties:</span>
-<br />
+
+<ul>
+    @foreach (var p in Model.Properties)
+    {
+        <li class="doctype-tab">
+            <span>@p.Tab</span> tab:
+            <ul>
+                @foreach (var item in p.Properties)
+                {
+                    string text = item.Text;
+                    text = text.TrimEnd('.') + (string.IsNullOrEmpty(text) ? "" : ".");
+                    var maxItemsText = item.Type == "Umbraco.NestedContent" || item.Type.StartsWith("Umbraco.MultiNodeTreePicker") ?
+                    (item.MaxItems > 0 ?
+                    string.Format("At most {0} '{1}' can be added.", item.MaxItems, item.Name) :
+                    "There is no limit on the number of items that can be added.")
+                    : "";
+                    var hasNestedContentDocTypes = item.NestedContentDocTypes != null && item.NestedContentDocTypes.Any();
+                    var hasModules = item.NestedContentElementsDocTypes != null && item.NestedContentElementsDocTypes.Any();
+                    <li>
+                        <span class="property-title">@item.Name:</span> @text @maxItemsText
+                        @if (hasNestedContentDocTypes)
+                        {
+                            <text>The elements can be of type:</text>
+                        }
+                    </li>
+                    if (hasNestedContentDocTypes)
+                    {
+                        <ul>
+                            @foreach (var dt in item.NestedContentDocTypes)
+                            {
+                                var alias = dt.Alias.SplitCamelCase().FirstCharToUpper();
+                                <li>
+                                    <span class="property-title">@alias</span> with the following properties:
+                                    @if (dt.Properties != null && dt.Properties.Any())
+                                    {
+
+                                        <ul>
+                                            @foreach (var p in dt.Properties)
+                                            {
+                                                <li>
+                                                    <span class="property-title">@p.Name</span>: @p.Text
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                    if (hasModules)
+                    {
+                        <ul>
+                            @foreach (var i in item.NestedContentElementsDocTypes)
+                            {
+                                <li>
+                                    <a href="#@i.Link"><span class="property-title">@i.Name</span></a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                }
+            </ul>
+        </li>
+    }
