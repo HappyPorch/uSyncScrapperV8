@@ -169,7 +169,7 @@ namespace uSyncScrapper
 
                 ComputeNestedContentProperties(docType, dataTypeDocuments);
                 ComputeNestedContentElementsProperties(docType, dataTypeDocuments, blueprintsDocuments);
-                ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
+                //ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
 
 
                 if (!docType.Properties.Any()) { continue; }
@@ -219,7 +219,7 @@ namespace uSyncScrapper
                     {
                         foreach (var item in prop.NestedContentElementsDocTypes)
                         {
-                            item.ContentType = allContentTypes.First(i => i.Name == item.Name);
+                            item.ContentType = allContentTypes.First(i => i.Alias == item.NcContentTypeAlias);
                         }
                     }
                 }
@@ -314,28 +314,26 @@ namespace uSyncScrapper
                     .Root
                     .Attribute("Key")
                     .Value == prop.Definition).FirstOrDefault();
-                if (datatype != null)
+                if (datatype != null && datatype.Root.Name != "Empty")
                 {
-                    //find max items
-                    var maxItems = datatype
-                        .Root
-                        .Element("PreValues")
-                        .Elements("PreValue")
-                        .FirstOrDefault(i => (string)i.Attribute("Alias") == "maxItems")
-                        .Value;
-                    var maxItemsDefault = 0;
-                    int.TryParse(maxItems, out maxItemsDefault);
-                    prop.MaxItems = maxItemsDefault;
+                    ////find max items
+                    //var maxItems = datatype
+                    //    .Root
+                    //    .Element("PreValues")
+                    //    .Elements("PreValue")
+                    //    .FirstOrDefault(i => (string)i.Attribute("Alias") == "maxItems")
+                    //    .Value;
+                    //var maxItemsDefault = 0;
+                    //int.TryParse(maxItems, out maxItemsDefault);
+                    //prop.MaxItems = maxItemsDefault;
 
                     //find available contentTypes for this nested content property
-                    var contentTypesString = datatype
-                        .Root
-                        .Element("PreValues")
-                        .Elements("PreValue")
-                        .FirstOrDefault(i => (string)i.Attribute("Alias") == "contentTypes")
-                        .Value;
-                    var deserializedContentTypes = JsonConvert.DeserializeObject<IEnumerable<ContentType>>(contentTypesString);
-                    prop.NestedContentDocTypes = deserializedContentTypes.Select(i => new NestedContentDocType { Alias = i.ncAlias, Name = i.nameTemplate });
+                    //var contentTypesString = datatype
+                    //    .Root
+                    //    .Element("Config")
+                    //    .Value;
+                    //var deserializedContentTypes = JsonConvert.DeserializeObject<IEnumerable<ContentType>>(contentTypesString);
+                    //prop.NestedContentDocTypes = deserializedContentTypes.Select(i => new NestedContentDocType { Alias = i.ncAlias, Name = i.nameTemplate });
                 }
             }
         }
