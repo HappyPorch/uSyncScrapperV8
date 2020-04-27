@@ -234,7 +234,7 @@ namespace uSyncScrapper
                     .OrderBy(i => i.Name)
                     .ToList();
 
-            var pages = allContentTypes.Where(i => i.Alias.EndsWith("Page"));
+            var pages = allContentTypes.Where(i => i.Alias.EndsWith("Page") || i.Alias.EndsWith("websiteSettings"));
 
             return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(pages, allModules);
         }
