@@ -344,8 +344,8 @@ namespace uSyncScrapper
             var blueprint = blueprintDocuments
                 .Where(i => i
                     .Root
-                    .Element("Info")
-                    .Element("ContentType")
+                    .Element("Info")?
+                    .Element("ContentType")?
                     .Value == docType.Alias)
                 .SingleOrDefault();
 
@@ -379,6 +379,10 @@ namespace uSyncScrapper
                     .Root
                     .Attribute("Key")
                     .Value == prop.Definition).FirstOrDefault();
+                if (datatype == null || datatype.Root.Name == "Empty")
+                {
+                    continue;
+                }
                 var config = JsonConvert.DeserializeObject<ConfigNotes>(datatype
                         .Root
                         .Element("Config")
