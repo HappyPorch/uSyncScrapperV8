@@ -229,12 +229,14 @@ namespace uSyncScrapper
                     .SelectMany(i => i.Properties)
                     .Where(i => i.NestedContentElementsDocTypes != null && i.NestedContentElementsDocTypes.Any())
                     .SelectMany(i => i.NestedContentElementsDocTypes)
-                    .GroupBy(i => i.Name)
+                    .GroupBy(i => i.NcContentTypeAlias)
                     .Select(g => g.First())
                     .OrderBy(i => i.Name)
                     .ToList();
 
-            return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(allContentTypes, allModules);
+            var pages = allContentTypes.Where(i => i.Alias.EndsWith("Page"));
+
+            return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(pages, allModules);
         }
 
         private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
