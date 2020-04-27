@@ -6,7 +6,7 @@
     var properties = Model.ContentType.Properties.Where(p => !p.Alias.ToLower().Contains("notes"));
 }
 
-<h3><a name="@Model.Link">@Model.Name</a> <span class="grey">module</span></h3>
+<h3><a name="@Model.Link">@Model.ContentType.Name</a> <span class="grey">module</span></h3>
 
 @if (!string.IsNullOrEmpty(Model.ContentType.Description))
 {
