@@ -43,6 +43,10 @@ namespace uSyncScrapper
         private void ParseUSyncfilesToHtml(string folder)
         {
             var result = ParseUSyncFiles(folder);
+            if (result.Item1 == null || result.Item2 == null)
+            {
+                return;
+            }
             var html = GenerateHtml(result.Item1, result.Item2);
             SaveFileDialog dlg = new SaveFileDialog();
             dlg.Filter = "Html Files (*.html)|*.html";
@@ -106,7 +110,12 @@ namespace uSyncScrapper
             //blueprints
             string blueprintsFolder = Directory
                         .GetDirectories(uSyncFolder, "Blueprints", SearchOption.AllDirectories)
-                        .First();
+                        .FirstOrDefault();
+            if (blueprintsFolder == null)
+            {
+                textBoxResults.AppendText(Environment.NewLine + "Blueprints folder not found!");
+                return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(null, null);
+            }
             var blueprintsFiles = Directory.GetFiles(blueprintsFolder, "*.config", SearchOption.AllDirectories);
             var blueprintsDocuments = blueprintsFiles
                         .Select(i => XDocument.Load(i))
