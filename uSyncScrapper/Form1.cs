@@ -170,6 +170,7 @@ namespace uSyncScrapper
                 ComputeNestedContentProperties(docType, dataTypeDocuments);
                 ComputeNestedContentElementsProperties(docType, dataTypeDocuments, blueprintsDocuments);
                 //ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
+                ComputeNotes(docType, dataTypeDocuments);
 
 
                 if (!docType.Properties.Any()) { continue; }
@@ -365,6 +366,25 @@ namespace uSyncScrapper
                 property.NestedContentElementsDocTypes = modules;
             }
 
+        }
+
+        private void ComputeNotes(DocumentType docType, List<XDocument> dataTypeDocuments)
+        {
+            var notesProperties = docType.Properties
+                                    .Where(i => i.Alias.ToLower().Contains("notes"));
+
+            foreach (var prop in notesProperties)
+            {
+                var datatype = dataTypeDocuments.Where(i => i
+                    .Root
+                    .Attribute("Key")
+                    .Value == prop.Definition).FirstOrDefault();
+                var config = JsonConvert.DeserializeObject<ConfigNotes>(datatype
+                        .Root
+                        .Element("Config")
+                        .Value);
+                docType.Notes = config.EditorNotes?.StripHTML() ?? string.Empty;
+            }
         }
 
         private void ComputeTreePickerMaxItems(List<XDocument> dataTypeDocuments, List<DocumentTypeProperty> properties)

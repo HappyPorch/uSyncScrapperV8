@@ -31,5 +31,10 @@ namespace uSyncScrapper.Extensions
         {
             return input?.First().ToString().ToUpper() + input?.Substring(1);
         }
+
+        public static string StripHTML(this string input)
+        {
+            return Regex.Replace(input, "<.*?>", String.Empty);
+        }
     }
 }

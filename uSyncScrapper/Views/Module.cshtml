@@ -2,43 +2,65 @@
 @using uSyncScrapper.Models
 @using uSyncScrapper.Extensions
 
+@{
+    var properties = Model.ContentType.Properties.Where(p => !p.Alias.ToLower().Contains("notes"));
+}
 
 <h3><a name="@Model.Link">@Model.Name</a> <span class="grey">module</span></h3>
+
+@if (!string.IsNullOrEmpty(Model.ContentType.Description))
+{
+    <p>@Model.ContentType.Description</p>
+}
+
+@if (!string.IsNullOrEmpty(Model.ContentType.Notes))
+{
+    <p>@Model.ContentType.Notes</p>
+}
+
+@if (properties == null || !properties.Any())
+{
+    if (string.IsNullOrEmpty(Model.ContentType.Notes))
+    {
+        <p>This module has no properties</p>
+    }
+    return;
+}
 
 <br />
 <span class="property-title">Properties:</span>
 
 <ul>
-    @foreach (var p in Model.ContentType.Properties)
+    @foreach (var p in properties)
     {
         var hasNestedContentDocTypes = p.NestedContentDocTypes != null && p.NestedContentDocTypes.Any();
-    <li>
-        <span class="property-title">@p.Name</span>: @p.Text
-        @if (hasNestedContentDocTypes)
-        {
-            <p>The elements can be of type:</p>
-            <ul>
-                @foreach (var nc in p.NestedContentDocTypes)
-                {
-                    var alias = nc.Alias.SplitCamelCase().FirstCharToUpper();
-                    <li>
-                        <span class="property-title">@alias</span> with the following properties:
-                        @if (nc.Properties != null && nc.Properties.Any())
-                        {
-                            <ul>
-                                @foreach (var prop in nc.Properties)
-                                {
-                                    <li>
-                                        <span class="property-title">@prop.Name</span>: @prop.Text
-                                    </li>
-                                }
-                            </ul>
-                        }
-                    </li>
-                }
-            </ul>
-        }
-    </li>
+        <li>
+            <span class="property-title">@p.Name</span>: @p.Text
+            @if (hasNestedContentDocTypes)
+            {
+                <p>The elements can be of type:</p>
+                <ul>
+                    @foreach (var nc in p.NestedContentDocTypes)
+                    {
+                        var alias = nc.Alias.SplitCamelCase().FirstCharToUpper();
+                        <li>
+                            <span class="property-title">@alias</span> with the following properties:
+                            @if (nc.Properties != null && nc.Properties.Any())
+                            {
+                                <ul>
+                                    @foreach (var prop in nc.Properties)
+                                    {
+                                        <li>
+                                            <span class="property-title">@prop.Name</span>: @prop.Text
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </li>
 
     }
 </ul>

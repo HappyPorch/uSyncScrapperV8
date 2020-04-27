@@ -87,7 +87,8 @@
             this.textBoxResults.Size = new System.Drawing.Size(587, 167);
             this.textBoxResults.TabIndex = 4;
             this.textBoxResults.Text = "Assumes all pages have a *page suffix. Assumes all compositions have a *compositi" +
-    "on suffix.";
+    "on suffix. Module\'s descriptions are fetched from the element\'s description as w" +
+    "ell as Editor Notes properties.";
             // 
             // Form1
             // 
