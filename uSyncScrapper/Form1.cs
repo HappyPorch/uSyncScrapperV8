@@ -458,5 +458,12 @@ namespace uSyncScrapper
 
         private bool IsPage(string alias) => alias.EndsWith("page.config");
 
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            textBoxResults.AppendText("Assumes all pages have a *page suffix.");
+            textBoxResults.AppendText(Environment.NewLine + "Assumes all compositions have a *composition suffix.");
+            textBoxResults.AppendText(Environment.NewLine + "Module's descriptions are fetched both from the element's description as well as Editor Notes properties.");
+            textBoxResults.AppendText(Environment.NewLine + "Only renders correctly if the modules property is set as Umbraco.NestedContentElements type on the uSync contentType files.");
+        }
     }
 }

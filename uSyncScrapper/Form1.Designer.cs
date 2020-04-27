@@ -33,8 +33,8 @@
             this.buttonBrowseFolder = new System.Windows.Forms.Button();
             this.buttonScrap = new System.Windows.Forms.Button();
             this.textBox1 = new System.Windows.Forms.TextBox();
-            this.checkBoxIncludePropertiesWithoutDescription = new System.Windows.Forms.CheckBox();
             this.textBoxResults = new System.Windows.Forms.TextBox();
+            this.checkBoxIncludePropertiesWithoutDescription = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // buttonBrowseFolder
@@ -66,6 +66,15 @@
             this.textBox1.TabIndex = 2;
             this.textBox1.Text = "E:\\Projects\\princesa-plaza\\website\\PrincesaPlaza.Web";
             // 
+            // textBoxResults
+            // 
+            this.textBoxResults.Location = new System.Drawing.Point(12, 81);
+            this.textBoxResults.Multiline = true;
+            this.textBoxResults.Name = "textBoxResults";
+            this.textBoxResults.ReadOnly = true;
+            this.textBoxResults.Size = new System.Drawing.Size(587, 167);
+            this.textBoxResults.TabIndex = 4;
+            // 
             // checkBoxIncludePropertiesWithoutDescription
             // 
             this.checkBoxIncludePropertiesWithoutDescription.AutoSize = true;
@@ -77,18 +86,6 @@
             this.checkBoxIncludePropertiesWithoutDescription.TabIndex = 3;
             this.checkBoxIncludePropertiesWithoutDescription.Text = "Include properties without description";
             this.checkBoxIncludePropertiesWithoutDescription.UseVisualStyleBackColor = true;
-            // 
-            // textBoxResults
-            // 
-            this.textBoxResults.Location = new System.Drawing.Point(12, 81);
-            this.textBoxResults.Multiline = true;
-            this.textBoxResults.Name = "textBoxResults";
-            this.textBoxResults.ReadOnly = true;
-            this.textBoxResults.Size = new System.Drawing.Size(587, 167);
-            this.textBoxResults.TabIndex = 4;
-            this.textBoxResults.Text = "Assumes all pages have a *page suffix. Assumes all compositions have a *compositi" +
-    "on suffix. Module\'s descriptions are fetched from the element\'s description as w" +
-    "ell as Editor Notes properties.";
             // 
             // Form1
             // 
@@ -103,6 +100,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form1";
             this.Text = "uSync Scrapper";
+            this.Load += new System.EventHandler(this.Form1_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -114,8 +112,8 @@
         private System.Windows.Forms.Button buttonBrowseFolder;
         private System.Windows.Forms.Button buttonScrap;
         private System.Windows.Forms.TextBox textBox1;
-        private System.Windows.Forms.CheckBox checkBoxIncludePropertiesWithoutDescription;
         private System.Windows.Forms.TextBox textBoxResults;
+        private System.Windows.Forms.CheckBox checkBoxIncludePropertiesWithoutDescription;
     }
 }
 
