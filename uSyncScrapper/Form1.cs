@@ -318,24 +318,16 @@ namespace uSyncScrapper
                     .Value == prop.Definition).FirstOrDefault();
                 if (datatype != null && datatype.Root.Name != "Empty")
                 {
-                    ////find max items
-                    //var maxItems = datatype
-                    //    .Root
-                    //    .Element("PreValues")
-                    //    .Elements("PreValue")
-                    //    .FirstOrDefault(i => (string)i.Attribute("Alias") == "maxItems")
-                    //    .Value;
-                    //var maxItemsDefault = 0;
-                    //int.TryParse(maxItems, out maxItemsDefault);
-                    //prop.MaxItems = maxItemsDefault;
+                    //find max items
+                    var config = JsonConvert.DeserializeObject<Config>(datatype
+                        .Root
+                        .Element("Config")
+                        .Value);
+
+                    prop.MaxItems = config.MaxItems;
 
                     //find available contentTypes for this nested content property
-                    //var contentTypesString = datatype
-                    //    .Root
-                    //    .Element("Config")
-                    //    .Value;
-                    //var deserializedContentTypes = JsonConvert.DeserializeObject<IEnumerable<ContentType>>(contentTypesString);
-                    //prop.NestedContentDocTypes = deserializedContentTypes.Select(i => new NestedContentDocType { Alias = i.ncAlias, Name = i.nameTemplate });
+                    prop.NestedContentDocTypes = config.ContentTypes.Select(i => new NestedContentDocType { Alias = i.ncAlias, Name = i.nameTemplate });
                 }
             }
         }

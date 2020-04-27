@@ -16,7 +16,7 @@ namespace uSyncScrapper.Models
         public int Order { get; set; }
         public string Type { get; set; }
         public string Definition { get; set; }
-        public int MaxItems { get; set; }
+        public int? MaxItems { get; set; }
         /// <summary>
         /// Allowed documents types on this nested content property.
         /// </summary>

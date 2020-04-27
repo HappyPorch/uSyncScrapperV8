@@ -11,8 +11,34 @@
 <ul>
     @foreach (var p in Model.ContentType.Properties)
     {
-        <li>
-            <span class="property-title">@p.Name</span>: @p.Text
-        </li>
+        var hasNestedContentDocTypes = p.NestedContentDocTypes != null && p.NestedContentDocTypes.Any();
+    <li>
+        <span class="property-title">@p.Name</span>: @p.Text
+        @if (hasNestedContentDocTypes)
+        {
+            <p>The elements can be of type:</p>
+            <ul>
+                @foreach (var nc in p.NestedContentDocTypes)
+                {
+                    var alias = nc.Alias.SplitCamelCase().FirstCharToUpper();
+                    <li>
+                        <span class="property-title">@alias</span> with the following properties:
+                        @if (nc.Properties != null && nc.Properties.Any())
+                        {
+                            <ul>
+                                @foreach (var prop in nc.Properties)
+                                {
+                                    <li>
+                                        <span class="property-title">@prop.Name</span>: @prop.Text
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </li>
+
     }
 </ul>
