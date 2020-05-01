@@ -1,14 +1,13 @@
-﻿using Newtonsoft.Json;
-using RazorEngine.Templating;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
+using Newtonsoft.Json;
+using RazorEngine.Templating;
 using uSyncScrapper.Extensions;
 using uSyncScrapper.Models;
 
@@ -16,12 +15,18 @@ namespace uSyncScrapper
 {
     public partial class Form1 : Form
     {
-        private string[] compositionAliasToIgnore = new string[] { "sEOComposition", "visibilityComposition",
-            "redirectComposition", "markupComposition", "allowDeleteComposition", "auxiliaryFoldersComposition", "bodyClassComposition" };
-        private string[] docTypesToIgnore = new string[] { "errorPage" };
+        private const string NestedContentTypeName = "Umbraco.NestedContent";
+        private const string NestedContentElementsTypeName = "Umbraco.NestedContentElements";
 
-        private const string nestedContentTypeName = "Umbraco.NestedContent";
-        private const string nestedContentElementsTypeName = "Umbraco.NestedContentElements";
+        private readonly string[] _compositionAliasToIgnore =
+        {
+            "sEOComposition", "visibilityComposition",
+            "redirectComposition", "markupComposition", "allowDeleteComposition", "auxiliaryFoldersComposition",
+            "bodyClassComposition"
+        };
+
+        private readonly string[] _docTypesToIgnore = {"errorPage"};
+
         public Form1()
         {
             InitializeComponent();
@@ -29,10 +34,7 @@ namespace uSyncScrapper
 
         private void buttonBrowseFolder_Click(object sender, EventArgs e)
         {
-            if (folderBrowserDialog1.ShowDialog() == DialogResult.OK)
-            {
-                textBox1.Text = folderBrowserDialog1.SelectedPath;
-            }
+            if (folderBrowserDialog1.ShowDialog() == DialogResult.OK) textBox1.Text = folderBrowserDialog1.SelectedPath;
         }
 
         private void buttonScrap_Click(object sender, EventArgs e)
@@ -43,32 +45,28 @@ namespace uSyncScrapper
         private void ParseUSyncfilesToHtml(string folder)
         {
             var result = ParseUSyncFiles(folder);
-            if (result.Item1 == null || result.Item2 == null)
-            {
-                return;
-            }
+            if (result.Item1 == null || result.Item2 == null) return;
             var html = GenerateHtml(result.Item1, result.Item2);
-            SaveFileDialog dlg = new SaveFileDialog();
-            dlg.Filter = "Html Files (*.html)|*.html";
-            dlg.DefaultExt = "html";
-            dlg.AddExtension = true;
-            if (dlg.ShowDialog() == DialogResult.OK)
+            var dlg = new SaveFileDialog
             {
-                File.WriteAllText(dlg.FileName, html);
-            }
+                Filter = "Html Files (*.html)|*.html",
+                DefaultExt = "html",
+                AddExtension = true
+            };
+            if (dlg.ShowDialog() == DialogResult.OK) File.WriteAllText(dlg.FileName, html);
             textBoxResults.AppendText(Environment.NewLine + "Done");
         }
 
         private Tuple<IEnumerable<DocumentType>, IEnumerable<Module>> ParseUSyncFiles(string folder)
         {
             //pages
-            string uSyncFolder = Directory
+            var uSyncFolder = Directory
                 .GetDirectories(folder, "uSync", SearchOption.AllDirectories)
-                .First(i => Directory.GetDirectories(i, "v8", SearchOption.AllDirectories).Count() > 0);
+                .First(i => Directory.GetDirectories(i, "v8", SearchOption.AllDirectories).Any());
 
-            string documentTypeFolder = Directory
-                        .GetDirectories(uSyncFolder, "ContentTypes", SearchOption.AllDirectories)
-                        .First();
+            var documentTypeFolder = Directory
+                .GetDirectories(uSyncFolder, "ContentTypes", SearchOption.AllDirectories)
+                .First();
             var allContentTypesFiles = Directory.GetFiles(documentTypeFolder, "*.config", SearchOption.AllDirectories);
 
             //var allPages = allContentTypesFiles.Where(i => i.EndsWith("page.config"));
@@ -81,55 +79,51 @@ namespace uSyncScrapper
             //    .ToArray();
 
             //datatypes
-            string datatypeFolder = Directory
-                        .GetDirectories(uSyncFolder, "DataTypes", SearchOption.AllDirectories)
-                        .First();
+            var datatypeFolder = Directory
+                .GetDirectories(uSyncFolder, "DataTypes", SearchOption.AllDirectories)
+                .First();
             var allDataTypes = Directory.GetFiles(datatypeFolder, "*.config", SearchOption.AllDirectories);
 
             var dataTypeDocuments = new List<XDocument>();
-            foreach (var datatypeFile in allDataTypes)
-            {
-                dataTypeDocuments.Add(XDocument.Load(datatypeFile));
-            }
+            foreach (var datatypeFile in allDataTypes) dataTypeDocuments.Add(XDocument.Load(datatypeFile));
 
             //compositions
             var compositionsFiles = allContentTypesFiles.Where(i => i.EndsWith("composition.config"));
             var allCompositionsDocuments = new List<XDocument>();
             foreach (var compositionsFile in compositionsFiles)
-            {
                 allCompositionsDocuments.Add(XDocument.Load(compositionsFile));
-            }
 
             allCompositionsDocuments = allCompositionsDocuments
                 .Where(c => c.Root.Name != "Empty")
-                .Where(c => !compositionAliasToIgnore.Contains(c
+                .Where(c => !_compositionAliasToIgnore.Contains(c
                     .Root
                     .Attribute("Alias")
                     .Value)).ToList();
 
             //blueprints
-            string blueprintsFolder = Directory
-                        .GetDirectories(uSyncFolder, "Blueprints", SearchOption.AllDirectories)
-                        .FirstOrDefault();
+            var blueprintsFolder = Directory
+                .GetDirectories(uSyncFolder, "Blueprints", SearchOption.AllDirectories)
+                .FirstOrDefault();
             if (blueprintsFolder == null)
             {
                 textBoxResults.AppendText(Environment.NewLine + "Blueprints folder not found!");
                 return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(null, null);
             }
+
             var blueprintsFiles = Directory.GetFiles(blueprintsFolder, "*.config", SearchOption.AllDirectories);
             var blueprintsDocuments = blueprintsFiles
-                        .Select(i => XDocument.Load(i))
-                        .ToList();
+                .Select(i => XDocument.Load(i))
+                .ToList();
 
-            int index = 1;
+            var index = 1;
             var allContentTypes = new List<DocumentType>();
 
             foreach (var file in allContentTypesFiles)
             {
                 var docType = new DocumentType();
-                XDocument doc = XDocument.Load(file);
+                var doc = XDocument.Load(file);
 
-                if (doc.Root.Name == "Empty") { continue; }
+                if (doc.Root.Name == "Empty") continue;
 
                 var name = doc
                     .Root
@@ -139,11 +133,11 @@ namespace uSyncScrapper
                 docType.Name = name;
 
                 var alias = doc
-                   .Root
-                   .Attribute("Alias")
-                   .Value;
+                    .Root
+                    .Attribute("Alias")
+                    .Value;
                 docType.Alias = alias;
-                if (docTypesToIgnore.Any(i => i == alias)) { continue; }
+                if (_docTypesToIgnore.Any(i => i == alias)) continue;
 
                 var childDocTypes = doc
                     .Root
@@ -182,7 +176,7 @@ namespace uSyncScrapper
                 ComputeNotes(docType, dataTypeDocuments);
 
 
-                if (!docType.Properties.Any()) { continue; }
+                if (!docType.Properties.Any()) continue;
                 allContentTypes.Add(docType);
                 docType.Index = index;
                 index++;
@@ -202,47 +196,41 @@ namespace uSyncScrapper
                 foreach (var childAlias in docType.ChildDocTypes)
                 {
                     var name = allContentTypes.FirstOrDefault(i => i.Alias == childAlias)?.Name;
-                    if (!string.IsNullOrEmpty(name))
-                    {
-                        childDocTypesNames.Add(name);
-                    }
+                    if (!string.IsNullOrEmpty(name)) childDocTypesNames.Add(name);
                 }
+
                 docType.ChildDocTypes = childDocTypesNames;
             }
 
             // fill nested content properties
             foreach (var docType in allContentTypes)
-            {
-                foreach (var prop in docType.Properties)
+            foreach (var prop in docType.Properties)
+                if (prop.NestedContentDocTypes != null && prop.NestedContentDocTypes.Any())
                 {
-                    if (prop.NestedContentDocTypes != null && prop.NestedContentDocTypes.Any())
+                    var nestedContentList = new List<NestedContentDocType>();
+                    foreach (var nestedContentDocType in prop.NestedContentDocTypes)
                     {
-                        var nestedContentList = new List<NestedContentDocType>();
-                        foreach (var nestedContentDocType in prop.NestedContentDocTypes)
-                        {
-                            nestedContentDocType.Properties = allContentTypes.FirstOrDefault(i => i.Alias == nestedContentDocType.Alias)?.Properties.ToList();
-                            nestedContentList.Add(nestedContentDocType);
-                        }
-                        prop.NestedContentDocTypes = nestedContentList;
+                        nestedContentDocType.Properties = allContentTypes
+                            .FirstOrDefault(i => i.Alias == nestedContentDocType.Alias)?.Properties.ToList();
+                        nestedContentList.Add(nestedContentDocType);
                     }
-                    else if (prop.NestedContentElementsDocTypes != null && prop.NestedContentElementsDocTypes.Any())
-                    {
-                        foreach (var item in prop.NestedContentElementsDocTypes)
-                        {
-                            item.ContentType = allContentTypes.First(i => i.Alias == item.NcContentTypeAlias);
-                        }
-                    }
+
+                    prop.NestedContentDocTypes = nestedContentList;
                 }
-            }
+                else if (prop.NestedContentElementsDocTypes != null && prop.NestedContentElementsDocTypes.Any())
+                {
+                    foreach (var item in prop.NestedContentElementsDocTypes)
+                        item.ContentType = allContentTypes.First(i => i.Alias == item.NcContentTypeAlias);
+                }
 
             var allModules = allContentTypes
-                    .SelectMany(i => i.Properties)
-                    .Where(i => i.NestedContentElementsDocTypes != null && i.NestedContentElementsDocTypes.Any())
-                    .SelectMany(i => i.NestedContentElementsDocTypes)
-                    .GroupBy(i => i.NcContentTypeAlias)
-                    .Select(g => g.First())
-                    .OrderBy(i => i.Name)
-                    .ToList();
+                .SelectMany(i => i.Properties)
+                .Where(i => i.NestedContentElementsDocTypes != null && i.NestedContentElementsDocTypes.Any())
+                .SelectMany(i => i.NestedContentElementsDocTypes)
+                .GroupBy(i => i.NcContentTypeAlias)
+                .Select(g => g.First())
+                .OrderBy(i => i.Name)
+                .ToList();
 
             var pages = allContentTypes.Where(i => i.Alias.EndsWith("Page") || i.Alias.EndsWith("websiteSettings"));
 
@@ -252,10 +240,7 @@ namespace uSyncScrapper
         private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
         {
             var tabs = new List<Tab>();
-            foreach (var comp in compositions)
-            {
-                tabs.AddRange(GetTabs(comp));
-            }
+            foreach (var comp in compositions) tabs.AddRange(GetTabs(comp));
             return tabs;
         }
 
@@ -265,60 +250,66 @@ namespace uSyncScrapper
                 .Root
                 .Element("Tabs")
                 .Elements("Tab")
-                .Select(i => new Tab { Caption = i.Element("Caption").Value, Order = int.Parse(i.Element("SortOrder").Value) });
+                .Select(i => new Tab
+                    {Caption = i.Element("Caption").Value, Order = int.Parse(i.Element("SortOrder").Value)});
         }
 
         private IEnumerable<XDocument> GetCompositions(List<XDocument> compositionsDocuments, XDocument doc)
         {
             var compositionKeys = doc
-                    .Root
-                    .Element("Info")
-                    .Element("Compositions")
-                    .Elements("Composition")
-                    .Select(i => (string)i.Attribute("Key"));
+                .Root
+                .Element("Info")
+                .Element("Compositions")
+                .Elements("Composition")
+                .Select(i => (string) i.Attribute("Key"));
 
             var compositions = compositionsDocuments
-                    .Where(i => compositionKeys.Contains(i
-                        .Root
-                        .Attribute("Key")
-                        .Value));
+                .Where(i => compositionKeys.Contains(i
+                    .Root
+                    .Attribute("Key")
+                    .Value));
 
             return compositions;
         }
 
-        private IEnumerable<DocumentTypeProperty> GetCompositionsProperties(IEnumerable<XDocument> compositionsDocuments, XDocument doc)
+        private IEnumerable<DocumentTypeProperty> GetCompositionsProperties(
+            IEnumerable<XDocument> compositionsDocuments, XDocument doc)
         {
             var allProperties = new List<DocumentTypeProperty>();
             foreach (var comp in compositionsDocuments)
-            {
                 if (comp != null)
-                {
                     allProperties.AddRange(GetDocumentProperties(comp));
-                }
-            }
             return allProperties;
         }
 
         private IEnumerable<DocumentTypeProperty> GetDocumentProperties(XDocument doc)
         {
             var properties = doc
-                    .Root
-                    .Element("GenericProperties")
-                    .Elements("GenericProperty")
-                    .Where(i => checkBoxIncludePropertiesWithoutDescription.Checked ? true : !string.IsNullOrEmpty(i.Element("Description").Value))
-                    .Select(i => new DocumentTypeProperty { Name = i.Element("Name").Value, Alias = i.Element("Alias").Value, Text = i.Element("Description").Value, Tab = i.Element("Tab").Value, Order = int.Parse(i.Element("SortOrder").Value), Type = i.Element("Type").Value, Definition = i.Element("Definition").Value });
+                .Root
+                .Element("GenericProperties")
+                .Elements("GenericProperty")
+                .Where(i => checkBoxIncludePropertiesWithoutDescription.Checked
+                    ? true
+                    : !string.IsNullOrEmpty(i.Element("Description").Value))
+                .Select(i => new DocumentTypeProperty
+                {
+                    Name = i.Element("Name").Value, Alias = i.Element("Alias").Value,
+                    Text = i.Element("Description").Value, Tab = i.Element("Tab").Value,
+                    Order = int.Parse(i.Element("SortOrder").Value), Type = i.Element("Type").Value,
+                    Definition = i.Element("Definition").Value
+                });
             return properties;
         }
 
         /// <summary>
-        /// Fills in nested Content properties of a doc type.
+        ///     Fills in nested Content properties of a doc type.
         /// </summary>
         /// <param name="docType"></param>
         /// <param name="dataTypeDocuments"></param>
         private void ComputeNestedContentProperties(DocumentType docType, IEnumerable<XDocument> dataTypeDocuments)
         {
             var nestedContentProperties = docType.Properties
-                                    .Where(i => i.Type == nestedContentTypeName);
+                .Where(i => i.Type == NestedContentTypeName);
 
             foreach (var prop in nestedContentProperties)
             {
@@ -337,17 +328,19 @@ namespace uSyncScrapper
                     prop.MaxItems = config.MaxItems;
 
                     //find available contentTypes for this nested content property
-                    prop.NestedContentDocTypes = config.ContentTypes.Select(i => new NestedContentDocType { Alias = i.ncAlias, Name = i.nameTemplate });
+                    prop.NestedContentDocTypes = config.ContentTypes.Select(i => new NestedContentDocType
+                        {Alias = i.ncAlias, Name = i.nameTemplate});
                 }
             }
         }
 
-        private void ComputeNestedContentElementsProperties(DocumentType docType, IEnumerable<XDocument> dataTypeDocuments, IEnumerable<XDocument> blueprintDocuments)
+        private void ComputeNestedContentElementsProperties(DocumentType docType,
+            IEnumerable<XDocument> dataTypeDocuments, IEnumerable<XDocument> blueprintDocuments)
         {
             var properties = docType.Properties
-                                    .Where(i => i.Type == nestedContentElementsTypeName);
+                .Where(i => i.Type == NestedContentElementsTypeName);
 
-            if (!properties.Any()) { return; }
+            if (!properties.Any()) return;
 
             //find blueprint for this contenttype
             var blueprint = blueprintDocuments
@@ -358,7 +351,7 @@ namespace uSyncScrapper
                     .Value == docType.Alias)
                 .SingleOrDefault();
 
-            if (blueprint == null) { return; }
+            if (blueprint == null) return;
 
             //find modules set on blueprint for this contenttype and this property
             foreach (var property in properties)
@@ -369,18 +362,16 @@ namespace uSyncScrapper
                     .Element(property.Alias)
                     .Elements("Value")
                     .FirstOrDefault()?
-                    .Value?
-                    .ToString());
+                    .Value);
 
                 property.NestedContentElementsDocTypes = modules;
             }
-
         }
 
         private void ComputeNotes(DocumentType docType, List<XDocument> dataTypeDocuments)
         {
             var notesProperties = docType.Properties
-                                    .Where(i => i.Alias.ToLower().Contains("notes"));
+                .Where(i => i.Alias.ToLower().Contains("notes"));
 
             foreach (var prop in notesProperties)
             {
@@ -388,14 +379,11 @@ namespace uSyncScrapper
                     .Root
                     .Attribute("Key")
                     .Value == prop.Definition).FirstOrDefault();
-                if (datatype == null || datatype.Root.Name == "Empty")
-                {
-                    continue;
-                }
+                if (datatype == null || datatype.Root.Name == "Empty") continue;
                 var config = JsonConvert.DeserializeObject<ConfigNotes>(datatype
-                        .Root
-                        .Element("Config")
-                        .Value);
+                    .Root
+                    .Element("Config")
+                    .Value);
                 docType.Notes = config.EditorNotes?.StripHTML() ?? string.Empty;
             }
         }
@@ -403,7 +391,7 @@ namespace uSyncScrapper
         private void ComputeTreePickerMaxItems(List<XDocument> dataTypeDocuments, List<DocumentTypeProperty> properties)
         {
             var treePickerProperties = properties
-                                    .Where(i => i.Type.StartsWith("Umbraco.MultiNodeTreePicker"));
+                .Where(i => i.Type.StartsWith("Umbraco.MultiNodeTreePicker"));
 
             foreach (var prop in treePickerProperties)
             {
@@ -425,9 +413,11 @@ namespace uSyncScrapper
 
         private string GenerateHtml(IEnumerable<DocumentType> docTypes, IEnumerable<Module> modules)
         {
-            string documentTypeFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "DocumentType.cshtml");
-            string moduleFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "Module.cshtml");
-            string finalDocumentFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "FinalDocument.cshtml");
+            var documentTypeFilePath =
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "DocumentType.cshtml");
+            var moduleFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "Module.cshtml");
+            var finalDocumentFilePath =
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "FinalDocument.cshtml");
 
             var templateService = new TemplateService();
             templateService.AddNamespace("uSyncScrapper.Models");
@@ -435,14 +425,11 @@ namespace uSyncScrapper
             var modulesBody = new StringBuilder();
 
             foreach (var docType in docTypes)
-            {
-                docTypeBody.Append(templateService.Parse(File.ReadAllText(documentTypeFilePath), docType, null, "DocumentType"));
-            }
+                docTypeBody.Append(templateService.Parse(File.ReadAllText(documentTypeFilePath), docType, null,
+                    "DocumentType"));
 
             foreach (var module in modules)
-            {
                 modulesBody.Append(templateService.Parse(File.ReadAllText(moduleFilePath), module, null, "Module"));
-            }
 
             var finalDocType = new FinalDocument
             {
@@ -451,7 +438,8 @@ namespace uSyncScrapper
                 ModulesBody = modulesBody.ToString(),
                 Modules = modules
             };
-            var finalDocument = templateService.Parse(File.ReadAllText(finalDocumentFilePath), finalDocType, null, "FinalDocument");
+            var finalDocument = templateService.Parse(File.ReadAllText(finalDocumentFilePath), finalDocType, null,
+                "FinalDocument");
 
             return WebUtility.HtmlDecode(finalDocument);
         }
@@ -460,9 +448,12 @@ namespace uSyncScrapper
         {
             textBoxResults.AppendText("Assumes all pages have a *page suffix.");
             textBoxResults.AppendText(Environment.NewLine + "Assumes all compositions have a *composition suffix.");
-            textBoxResults.AppendText(Environment.NewLine + "Assumes all pages have a content template (blueprint). This is how we figure what modules are set.");
-            textBoxResults.AppendText(Environment.NewLine + "Module's descriptions are fetched both from the element's description as well as Editor Notes properties.");
-            textBoxResults.AppendText(Environment.NewLine + "Only renders correctly if the modules property is set as Umbraco.NestedContentElements type on the uSync contentType files.");
+            textBoxResults.AppendText(Environment.NewLine +
+                                      "Assumes all pages have a content template (blueprint). This is how we figure what modules are set.");
+            textBoxResults.AppendText(Environment.NewLine +
+                                      "Module's descriptions are fetched both from the element's description as well as Editor Notes properties.");
+            textBoxResults.AppendText(Environment.NewLine +
+                                      "Only renders correctly if the modules property is set as Umbraco.NestedContentElements type on the uSync contentType files.");
         }
     }
 }

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace uSyncScrapper.Models
+﻿namespace uSyncScrapper.Models
 {
     public class Module
     {
@@ -12,6 +6,6 @@ namespace uSyncScrapper.Models
         public string Name { get; set; }
         public string NcContentTypeAlias { get; set; }
         public DocumentType ContentType { get; set; }
-        public string Link { get => $"module-{NcContentTypeAlias}"; }
+        public string Link => $"module-{NcContentTypeAlias}";
     }
 }

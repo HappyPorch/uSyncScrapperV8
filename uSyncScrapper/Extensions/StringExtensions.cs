@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace uSyncScrapper.Extensions
 {
@@ -34,7 +31,7 @@ namespace uSyncScrapper.Extensions
 
         public static string StripHTML(this string input)
         {
-            return Regex.Replace(input, "<.*?>", String.Empty);
+            return Regex.Replace(input, "<.*?>", string.Empty);
         }
     }
 }
