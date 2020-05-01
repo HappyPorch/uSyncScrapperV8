@@ -75,12 +75,11 @@ namespace uSyncScrapper
                 return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(null, null);
             }
 
-            var allCompositionsDocuments  = contentTypes
-                .Where(c => c.Root?.Name != "Empty")
-                .Where(c => !Constants.CompositionAliasToIgnore.Contains(c
-                    .Root
-                    .Attribute("Alias")
-                    ?.Value)).ToList();
+            var compositions = from c in contentTypes
+                               where c.Root?.Element("Info")?.Element("Folder")?.Value == "Compositions"
+                               let alias = c.Root?.Attribute("Alias")?.Value
+                               where !Constants.CompositionAliasToIgnore.Contains(alias)
+                               select c;
 
             var index = 1;
             var allContentTypes = new List<DocumentType>();
@@ -117,7 +116,7 @@ namespace uSyncScrapper
                     .Value;
                 docType.Description = description;
 
-                var compositionsDocuments = GetCompositions(allCompositionsDocuments, doc);
+                var compositionsDocuments = GetCompositions(compositions, doc);
 
                 var allTabs = new List<Tab>();
                 allTabs.AddRange(GetTabs(doc));
@@ -218,7 +217,7 @@ namespace uSyncScrapper
                 { Caption = i.Element("Caption").Value, Order = int.Parse(i.Element("SortOrder").Value) });
         }
 
-        private IEnumerable<XDocument> GetCompositions(List<XDocument> compositionsDocuments, XDocument doc)
+        private IEnumerable<XDocument> GetCompositions(IEnumerable<XDocument> compositionsDocuments, XDocument doc)
         {
             var compositionKeys = doc
                 .Root
@@ -414,7 +413,6 @@ namespace uSyncScrapper
         private void Form1_Load(object sender, EventArgs e)
         {
             textBoxResults.AppendText("Assumes all pages have a *page suffix.");
-            textBoxResults.AppendText(Environment.NewLine + "Assumes all compositions have a *composition suffix.");
             textBoxResults.AppendText(Environment.NewLine +
                                       "Assumes all pages have a content template (blueprint). This is how we figure what modules are set.");
             textBoxResults.AppendText(Environment.NewLine +
