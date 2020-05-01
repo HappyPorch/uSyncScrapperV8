@@ -144,7 +144,7 @@
     <None Include="Views\FinalDocument.cshtml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Views\DocumentType.cshtml">
+    <None Include="Views\ContentType.cshtml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Web.config">

@@ -29,7 +29,7 @@ namespace uSyncScrapper.Repositories
 
             var files = Directory.GetFiles(folder, "*.config", SearchOption.AllDirectories)
                 .Select(XDocument.Load)
-                .Where(i => i.Root?.Name != "Empty")
+                .Where(i => i.Root?.Name != "Empty" && !Constants.DocTypesToIgnore.Contains(i.Root?.Attribute("Alias")?.Value))
                 .ToList();
 
             return files;

@@ -76,52 +76,25 @@ namespace uSyncScrapper
                 return new Tuple<IEnumerable<ContentType>, IEnumerable<Module>>(null, null);
             }
 
-            
-
             var contentTypes = contentTypeFiles.Map(dataTypeFiles, blueprintFiles);
 
             foreach (var contentType in contentTypes)
             {
-                //var compositionsDocuments = GetCompositions(compositions, contentType);
-
-                //var allTabs = new List<Tab>();
-                //allTabs.AddRange(GetCompositionsTabs(compositionsDocuments));
-                //allTabs = allTabs.OrderBy(i => i.SortOrder).ToList();
-
-                //var allProperties = new List<DocumentTypeProperty>();
-                //allProperties.AddRange(GetCompositionsProperties(compositionsDocuments, contentType));
-                //allProperties.AddRange(GetDocumentProperties(contentType));
-
-                //allProperties = allProperties
-                //    .OrderBy(p => allTabs.IndexOf(allTabs.First(t => t.Caption == p.Tab)))
-                //    .ThenBy(i => i.Order)
-                //    .ToList();
-                //docType.Properties = allProperties;
-
                 ComputeNestedContentProperties(contentType, dataTypeFiles);
                 ComputeNestedContentElementsProperties(contentType, dataTypeFiles, blueprintFiles);
                 //ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
                 ComputeNotes(contentType, dataTypeFiles);
-            }
 
-            // figure out parent doc types
-            foreach (var docType in contentTypes)
-            {
-                var parentDocTypes = contentTypes.Where(i => i.ChildDocTypes.Contains(docType.Alias));
-                docType.ParentDocTypes = parentDocTypes.Select(i => i.Name).ToList();
-            }
+                var parentDocTypes = contentTypes.Where(i => i.ChildDocTypes.Contains(contentType.Alias));
+                contentType.ParentDocTypes = parentDocTypes.Select(i => i.Name).ToList();
 
-            // move child doc types alias to names
-            foreach (var docType in contentTypes)
-            {
                 var childDocTypesNames = new List<string>();
-                foreach (var childAlias in docType.ChildDocTypes)
+                foreach (var childAlias in contentType.ChildDocTypes)
                 {
                     var name = contentTypes.FirstOrDefault(i => i.Alias == childAlias)?.Name;
                     if (!string.IsNullOrEmpty(name)) childDocTypesNames.Add(name);
                 }
-
-                docType.ChildDocTypes = childDocTypesNames;
+                contentType.ChildDocTypes = childDocTypesNames;
             }
 
             // fill nested content properties
@@ -202,7 +175,7 @@ namespace uSyncScrapper
                     Alias = i.Element("Alias").Value,
                     Text = i.Element("Description").Value,
                     Tab = i.Element("Tab").Value,
-                    Order = int.Parse(i.Element("SortOrder").Value),
+                    SortOrder = int.Parse(i.Element("SortOrder").Value),
                     Type = i.Element("Type").Value,
                     Definition = i.Element("Definition").Value
                 });
@@ -319,30 +292,30 @@ namespace uSyncScrapper
             }
         }
 
-        private string GenerateHtml(IEnumerable<ContentType> docTypes, IEnumerable<Module> modules)
+        private string GenerateHtml(IEnumerable<ContentType> contentTypes, IEnumerable<Module> modules)
         {
-            var documentTypeFilePath =
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "DocumentType.cshtml");
+            var contentTypeFilePath =
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "ContentType.cshtml");
             var moduleFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "Module.cshtml");
             var finalDocumentFilePath =
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "FinalDocument.cshtml");
 
             var templateService = new TemplateService();
             templateService.AddNamespace("uSyncScrapper.Models");
-            var docTypeBody = new StringBuilder();
+            var contentTypeBody = new StringBuilder();
             var modulesBody = new StringBuilder();
 
-            foreach (var docType in docTypes)
-                docTypeBody.Append(templateService.Parse(File.ReadAllText(documentTypeFilePath), docType, null,
-                    "DocumentType"));
+            foreach (var contentType in contentTypes)
+                contentTypeBody.Append(templateService.Parse(File.ReadAllText(contentTypeFilePath), contentType, null,
+                    "ContentType"));
 
             foreach (var module in modules)
                 modulesBody.Append(templateService.Parse(File.ReadAllText(moduleFilePath), module, null, "Module"));
 
             var finalDocType = new FinalDocument
             {
-                DocTypesBody = docTypeBody.ToString(),
-                DocTypes = docTypes,
+                DocTypesBody = contentTypeBody.ToString(),
+                DocTypes = contentTypes,
                 ModulesBody = modulesBody.ToString(),
                 Modules = modules
             };
