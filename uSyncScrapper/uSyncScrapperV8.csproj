@@ -94,6 +94,7 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Mappers\ContentTypeMapper.cs" />
     <Compile Include="Models\Config.cs" />
     <Compile Include="Models\ConfigNotes.cs" />
     <Compile Include="Models\ContentType2.cs" />

@@ -12,6 +12,7 @@ using uSyncScrapper.Context;
 using uSyncScrapper.Extensions;
 using uSyncScrapper.Models;
 using uSyncScrapper.Repositories;
+using uSyncScrapper.Mappers;
 
 namespace uSyncScrapper
 {
@@ -65,100 +66,58 @@ namespace uSyncScrapper
                 .First(i => Directory.GetDirectories(i, "v8", SearchOption.AllDirectories).Any());
             _context.BaseFolder = uSyncFolder;
 
-            var contentTypes = _contentTypeRepository.GetAll();
-            var dataTypes = _dataTypeRepository.GetAll();
-            var blueprints = _blueprintRepository.GetAll();
+            var contentTypeFiles = _contentTypeRepository.GetAll();
+            var dataTypeFiles = _dataTypeRepository.GetAll();
+            var blueprintFiles = _blueprintRepository.GetAll();
 
-            if (!blueprints.Any())
+            if (!blueprintFiles.Any())
             {
                 textBoxResults.AppendText(Environment.NewLine + "Blueprints folder not found or empty!");
                 return new Tuple<IEnumerable<ContentType>, IEnumerable<Module>>(null, null);
             }
 
-            var compositions = from c in contentTypes
-                               where c.Root?.Element("Info")?.Element("Folder")?.Value == "Compositions"
-                               let alias = c.Root?.Attribute("Alias")?.Value
-                               where !Constants.CompositionAliasToIgnore.Contains(alias)
-                               select c;
+            
 
-            var index = 1;
-            var allContentTypes = new List<ContentType>();
+            var contentTypes = contentTypeFiles.Map(dataTypeFiles, blueprintFiles);
 
-            foreach (var doc in contentTypes)
+            foreach (var contentType in contentTypes)
             {
-                var docType = new ContentType();
+                //var compositionsDocuments = GetCompositions(compositions, contentType);
 
-                var name = doc
-                    .Root
-                    .Element("Info")
-                    .Element("Name")
-                    .Value;
-                docType.Name = name;
+                //var allTabs = new List<Tab>();
+                //allTabs.AddRange(GetCompositionsTabs(compositionsDocuments));
+                //allTabs = allTabs.OrderBy(i => i.SortOrder).ToList();
 
-                var alias = doc
-                    .Root
-                    .Attribute("Alias")
-                    .Value;
-                docType.Alias = alias;
-                if (Constants.DocTypesToIgnore.Any(i => i == alias)) continue;
+                //var allProperties = new List<DocumentTypeProperty>();
+                //allProperties.AddRange(GetCompositionsProperties(compositionsDocuments, contentType));
+                //allProperties.AddRange(GetDocumentProperties(contentType));
 
-                var childDocTypes = doc
-                    .Root
-                    .Element("Structure")
-                    .Elements("ContentType")
-                    .Select(i => i.Value);
-                docType.ChildDocTypes = childDocTypes;
+                //allProperties = allProperties
+                //    .OrderBy(p => allTabs.IndexOf(allTabs.First(t => t.Caption == p.Tab)))
+                //    .ThenBy(i => i.Order)
+                //    .ToList();
+                //docType.Properties = allProperties;
 
-                var description = doc
-                    .Root
-                    .Element("Info")
-                    .Element("Description")
-                    .Value;
-                docType.Description = description;
-
-                var compositionsDocuments = GetCompositions(compositions, doc);
-
-                var allTabs = new List<Tab>();
-                allTabs.AddRange(GetTabs(doc));
-                allTabs.AddRange(GetCompositionsTabs(compositionsDocuments));
-                allTabs = allTabs.OrderBy(i => i.Order).ToList();
-
-                var allProperties = new List<DocumentTypeProperty>();
-                allProperties.AddRange(GetCompositionsProperties(compositionsDocuments, doc));
-                allProperties.AddRange(GetDocumentProperties(doc));
-
-                allProperties = allProperties
-                    .OrderBy(p => allTabs.IndexOf(allTabs.First(t => t.Caption == p.Tab)))
-                    .ThenBy(i => i.Order)
-                    .ToList();
-                docType.Properties = allProperties;
-
-                ComputeNestedContentProperties(docType, dataTypes);
-                ComputeNestedContentElementsProperties(docType, dataTypes, blueprints);
+                ComputeNestedContentProperties(contentType, dataTypeFiles);
+                ComputeNestedContentElementsProperties(contentType, dataTypeFiles, blueprintFiles);
                 //ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
-                ComputeNotes(docType, dataTypes);
-
-
-                if (!docType.Properties.Any()) continue;
-                allContentTypes.Add(docType);
-                docType.Index = index;
-                index++;
+                ComputeNotes(contentType, dataTypeFiles);
             }
 
             // figure out parent doc types
-            foreach (var docType in allContentTypes)
+            foreach (var docType in contentTypes)
             {
-                var parentDocTypes = allContentTypes.Where(i => i.ChildDocTypes.Contains(docType.Alias));
+                var parentDocTypes = contentTypes.Where(i => i.ChildDocTypes.Contains(docType.Alias));
                 docType.ParentDocTypes = parentDocTypes.Select(i => i.Name).ToList();
             }
 
             // move child doc types alias to names
-            foreach (var docType in allContentTypes)
+            foreach (var docType in contentTypes)
             {
                 var childDocTypesNames = new List<string>();
                 foreach (var childAlias in docType.ChildDocTypes)
                 {
-                    var name = allContentTypes.FirstOrDefault(i => i.Alias == childAlias)?.Name;
+                    var name = contentTypes.FirstOrDefault(i => i.Alias == childAlias)?.Name;
                     if (!string.IsNullOrEmpty(name)) childDocTypesNames.Add(name);
                 }
 
@@ -166,15 +125,15 @@ namespace uSyncScrapper
             }
 
             // fill nested content properties
-            foreach (var docType in allContentTypes)
-                foreach (var prop in docType.Properties)
+            foreach (var docType in contentTypes)
+                foreach (var prop in docType.PropertiesSelf)
                     if (prop.NestedContentDocTypes != null && prop.NestedContentDocTypes.Any())
                     {
                         var nestedContentList = new List<NestedContentDocType>();
                         foreach (var nestedContentDocType in prop.NestedContentDocTypes)
                         {
-                            nestedContentDocType.Properties = allContentTypes
-                                .FirstOrDefault(i => i.Alias == nestedContentDocType.Alias)?.Properties.ToList();
+                            nestedContentDocType.Properties = contentTypes
+                                .FirstOrDefault(i => i.Alias == nestedContentDocType.Alias)?.PropertiesSelf.ToList();
                             nestedContentList.Add(nestedContentDocType);
                         }
 
@@ -183,11 +142,11 @@ namespace uSyncScrapper
                     else if (prop.NestedContentElementsDocTypes != null && prop.NestedContentElementsDocTypes.Any())
                     {
                         foreach (var item in prop.NestedContentElementsDocTypes)
-                            item.ContentType = allContentTypes.First(i => i.Alias == item.NcContentTypeAlias);
+                            item.ContentType = contentTypes.First(i => i.Alias == item.NcContentTypeAlias);
                     }
 
-            var allModules = allContentTypes
-                .SelectMany(i => i.Properties)
+            var allModules = contentTypes
+                .SelectMany(i => i.PropertiesSelf)
                 .Where(i => i.NestedContentElementsDocTypes != null && i.NestedContentElementsDocTypes.Any())
                 .SelectMany(i => i.NestedContentElementsDocTypes)
                 .GroupBy(i => i.NcContentTypeAlias)
@@ -195,45 +154,28 @@ namespace uSyncScrapper
                 .OrderBy(i => i.Name)
                 .ToList();
 
-            var pages = allContentTypes.Where(i => i.Alias.EndsWith("Page") || i.Alias.EndsWith("websiteSettings"));
+            var pages = contentTypes.Where(i => i.Alias.EndsWith("Page") || i.Alias.EndsWith("websiteSettings"));
 
             return new Tuple<IEnumerable<ContentType>, IEnumerable<Module>>(pages, allModules);
         }
 
-        private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
-        {
-            var tabs = new List<Tab>();
-            foreach (var comp in compositions) tabs.AddRange(GetTabs(comp));
-            return tabs;
-        }
+        //private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
+        //{
+        //    var tabs = new List<Tab>();
+        //    foreach (var comp in compositions) tabs.AddRange(GetTabs(comp));
+        //    return tabs;
+        //}
 
-        private IEnumerable<Tab> GetTabs(XDocument doc)
-        {
-            return doc
-                .Root
-                .Element("Tabs")
-                .Elements("Tab")
-                .Select(i => new Tab
-                { Caption = i.Element("Caption").Value, Order = int.Parse(i.Element("SortOrder").Value) });
-        }
+        //private IEnumerable<XDocument> GetCompositions(IEnumerable<XDocument> compositionsDocuments, ContentType doc)
+        //{
+        //    var compositions = compositionsDocuments
+        //        .Where(i => doc.CompositionKeys.Contains(i
+        //            .Root
+        //            .Attribute("Key")
+        //            .Value));
 
-        private IEnumerable<XDocument> GetCompositions(IEnumerable<XDocument> compositionsDocuments, XDocument doc)
-        {
-            var compositionKeys = doc
-                .Root
-                .Element("Info")
-                .Element("Compositions")
-                .Elements("Composition")
-                .Select(i => (string)i.Attribute("Key"));
-
-            var compositions = compositionsDocuments
-                .Where(i => compositionKeys.Contains(i
-                    .Root
-                    .Attribute("Key")
-                    .Value));
-
-            return compositions;
-        }
+        //    return compositions;
+        //}
 
         private IEnumerable<DocumentTypeProperty> GetCompositionsProperties(
             IEnumerable<XDocument> compositionsDocuments, XDocument doc)
@@ -274,7 +216,7 @@ namespace uSyncScrapper
         /// <param name="dataTypeDocuments"></param>
         private void ComputeNestedContentProperties(ContentType docType, IEnumerable<XDocument> dataTypeDocuments)
         {
-            var nestedContentProperties = docType.Properties
+            var nestedContentProperties = docType.PropertiesSelf
                 .Where(i => i.Type == Constants.NestedContentTypeName);
 
             foreach (var prop in nestedContentProperties)
@@ -283,7 +225,7 @@ namespace uSyncScrapper
                     .Root
                     .Attribute("Key")
                     .Value == prop.Definition).FirstOrDefault();
-                if (datatype != null && datatype.Root.Name != "Empty")
+                if (datatype != null)
                 {
                     //find max items
                     var config = JsonConvert.DeserializeObject<Config>(datatype
@@ -303,7 +245,7 @@ namespace uSyncScrapper
         private void ComputeNestedContentElementsProperties(ContentType docType,
             IEnumerable<XDocument> dataTypeDocuments, IEnumerable<XDocument> blueprintDocuments)
         {
-            var properties = docType.Properties
+            var properties = docType.PropertiesSelf
                 .Where(i => i.Type == Constants.NestedContentElementsTypeName);
 
             if (!properties.Any()) return;
@@ -336,7 +278,7 @@ namespace uSyncScrapper
 
         private void ComputeNotes(ContentType docType, IEnumerable<XDocument> dataTypeDocuments)
         {
-            var notesProperties = docType.Properties
+            var notesProperties = docType.PropertiesSelf
                 .Where(i => i.Alias.ToLower().Contains("notes"));
 
             foreach (var prop in notesProperties)
