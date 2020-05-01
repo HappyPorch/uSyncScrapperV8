@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Autofac;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +9,8 @@ namespace uSyncScrapper
 {
     static class Program
     {
+        private static IContainer container;
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
@@ -16,7 +19,22 @@ namespace uSyncScrapper
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            Bootstrap();
+            Application.Run(container.Resolve<Form1>());
+        }
+
+        private static void Bootstrap()
+        {
+            var builder = new ContainerBuilder();
+
+            //builder.RegisterType<LocalContext>().As<ILocalContext>().SingleInstance();
+            //builder.RegisterType<ContentTypeMapper>();
+            //builder.RegisterGeneric(typeof(Repository<>))
+            //    .As(typeof(IRepository<>))
+            //    .SingleInstance();
+            builder.RegisterType<Form1>();
+
+            container = builder.Build();
         }
     }
 }
