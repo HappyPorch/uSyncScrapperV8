@@ -96,9 +96,9 @@
     </Compile>
     <Compile Include="Models\Config.cs" />
     <Compile Include="Models\ConfigNotes.cs" />
-    <Compile Include="Models\ContentType.cs" />
+    <Compile Include="Models\ContentType2.cs" />
     <Compile Include="Models\DataTypeConfig.cs" />
-    <Compile Include="Models\DocumentType.cs" />
+    <Compile Include="Models\ContentType.cs" />
     <Compile Include="Models\Module.cs" />
     <Compile Include="Models\NestedContentDoctype.cs" />
     <Compile Include="Models\DocumentTypeProperty.cs" />

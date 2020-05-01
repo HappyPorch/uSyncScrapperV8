@@ -57,7 +57,7 @@ namespace uSyncScrapper
             textBoxResults.AppendText(Environment.NewLine + "Done");
         }
 
-        private Tuple<IEnumerable<DocumentType>, IEnumerable<Module>> ParseUSyncFiles(string folder)
+        private Tuple<IEnumerable<ContentType>, IEnumerable<Module>> ParseUSyncFiles(string folder)
         {
             //pages
             var uSyncFolder = Directory
@@ -72,7 +72,7 @@ namespace uSyncScrapper
             if (!blueprints.Any())
             {
                 textBoxResults.AppendText(Environment.NewLine + "Blueprints folder not found or empty!");
-                return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(null, null);
+                return new Tuple<IEnumerable<ContentType>, IEnumerable<Module>>(null, null);
             }
 
             var compositions = from c in contentTypes
@@ -82,11 +82,11 @@ namespace uSyncScrapper
                                select c;
 
             var index = 1;
-            var allContentTypes = new List<DocumentType>();
+            var allContentTypes = new List<ContentType>();
 
             foreach (var doc in contentTypes)
             {
-                var docType = new DocumentType();
+                var docType = new ContentType();
 
                 var name = doc
                     .Root
@@ -197,7 +197,7 @@ namespace uSyncScrapper
 
             var pages = allContentTypes.Where(i => i.Alias.EndsWith("Page") || i.Alias.EndsWith("websiteSettings"));
 
-            return new Tuple<IEnumerable<DocumentType>, IEnumerable<Module>>(pages, allModules);
+            return new Tuple<IEnumerable<ContentType>, IEnumerable<Module>>(pages, allModules);
         }
 
         private IEnumerable<Tab> GetCompositionsTabs(IEnumerable<XDocument> compositions)
@@ -272,7 +272,7 @@ namespace uSyncScrapper
         /// </summary>
         /// <param name="docType"></param>
         /// <param name="dataTypeDocuments"></param>
-        private void ComputeNestedContentProperties(DocumentType docType, IEnumerable<XDocument> dataTypeDocuments)
+        private void ComputeNestedContentProperties(ContentType docType, IEnumerable<XDocument> dataTypeDocuments)
         {
             var nestedContentProperties = docType.Properties
                 .Where(i => i.Type == Constants.NestedContentTypeName);
@@ -300,7 +300,7 @@ namespace uSyncScrapper
             }
         }
 
-        private void ComputeNestedContentElementsProperties(DocumentType docType,
+        private void ComputeNestedContentElementsProperties(ContentType docType,
             IEnumerable<XDocument> dataTypeDocuments, IEnumerable<XDocument> blueprintDocuments)
         {
             var properties = docType.Properties
@@ -334,7 +334,7 @@ namespace uSyncScrapper
             }
         }
 
-        private void ComputeNotes(DocumentType docType, IEnumerable<XDocument> dataTypeDocuments)
+        private void ComputeNotes(ContentType docType, IEnumerable<XDocument> dataTypeDocuments)
         {
             var notesProperties = docType.Properties
                 .Where(i => i.Alias.ToLower().Contains("notes"));
@@ -377,7 +377,7 @@ namespace uSyncScrapper
             }
         }
 
-        private string GenerateHtml(IEnumerable<DocumentType> docTypes, IEnumerable<Module> modules)
+        private string GenerateHtml(IEnumerable<ContentType> docTypes, IEnumerable<Module> modules)
         {
             var documentTypeFilePath =
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Views", "DocumentType.cshtml");

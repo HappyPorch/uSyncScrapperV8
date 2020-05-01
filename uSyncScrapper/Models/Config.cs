@@ -4,7 +4,7 @@ namespace uSyncScrapper.Models
 {
     public class Config
     {
-        public IEnumerable<ContentType> ContentTypes { get; set; }
+        public IEnumerable<ContentType2> ContentTypes { get; set; }
         public int? MinItems { get; set; }
         public int? MaxItems { get; set; }
     }
