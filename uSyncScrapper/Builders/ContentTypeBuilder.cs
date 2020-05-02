@@ -1,22 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition.Hosting;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
+using Newtonsoft.Json;
 using uSyncScrapper.Context;
 using uSyncScrapper.Models;
 
-namespace uSyncScrapper.Mappers
+namespace uSyncScrapper.Builders
 {
-    public static class ContentTypeMapper
+    public static class ContentTypeBuilder
     {
-        public static IReadOnlyList<ContentType> Map(this IReadOnlyList<XDocument> contentTypes, IReadOnlyList<XDocument> dataTypes,
+        public static IReadOnlyList<ContentType> Build(this IReadOnlyList<XDocument> contentTypes, IReadOnlyList<XDocument> dataTypes,
             IReadOnlyList<XDocument> blueprints)
         {
             var result = contentTypes
-                .Select(i => MapFirstPass(i, contentTypes, dataTypes, blueprints))
+                .Select(i => BuildFromXml(i, contentTypes, dataTypes, blueprints))
                 .ToList();
 
             var compositions = result
@@ -24,17 +21,17 @@ namespace uSyncScrapper.Mappers
                 .ToList();
 
             result = result
-                .Select(i => MapSecondPass(i, contentTypes, dataTypes, blueprints, compositions))
+                .Select(i => BuildCompositions(i, contentTypes, dataTypes, blueprints, compositions))
                 .ToList();
 
             result = result
-                .Select(i => MapThirdPass(i, contentTypes, dataTypes, blueprints, compositions))
+                .Select(i => BuildProperties(i, contentTypes, dataTypes, blueprints, compositions))
                 .ToList();
 
             return result;
         }
 
-        private static ContentType MapFirstPass(XDocument doc, IReadOnlyList<XDocument> contentTypes, IReadOnlyList<XDocument> dataTypes,
+        private static ContentType BuildFromXml(XDocument doc, IReadOnlyList<XDocument> contentTypes, IReadOnlyList<XDocument> dataTypes,
             IReadOnlyList<XDocument> blueprints)
         {
             return new ContentType
@@ -90,16 +87,17 @@ namespace uSyncScrapper.Mappers
             };
         }
 
-        private static ContentType MapSecondPass(ContentType contentType, IReadOnlyList<XDocument> contentTypes,
+        private static ContentType BuildCompositions(ContentType contentType, IReadOnlyList<XDocument> contentTypes,
              IReadOnlyList<XDocument> dataTypes, IReadOnlyList<XDocument> blueprints, IReadOnlyList<ContentType> compositions)
         {
             contentType.Compositions = contentType.CompositionKeys
                 .Select(i => compositions.Single(c => c.Key == i))
                 .Where(i => !Constants.CompositionAliasToIgnore.Contains(i.Alias));
+
             return contentType;
         }
 
-        private static ContentType MapThirdPass(ContentType contentType, IReadOnlyList<XDocument> contentTypes,
+        private static ContentType BuildProperties(ContentType contentType, IReadOnlyList<XDocument> contentTypes,
             IReadOnlyList<XDocument> dataTypes, IReadOnlyList<XDocument> blueprints, IReadOnlyList<ContentType> compositions)
         {
             contentType.Properties = contentType.PropertiesSelf
@@ -107,7 +105,44 @@ namespace uSyncScrapper.Mappers
                 .Select(p => new { Property = p, Tab = contentType.Tabs.Single(t => t.Caption == p.Tab) })
                 .OrderBy(i => i.Tab.SortOrder)
                 .ThenBy(i => i.Property.SortOrder)
-                .Select(i => i.Property);
+                .Select(i => i.Property)
+                .ToList();
+
+            var properties = contentType.Properties
+                .Where(i => i.Type == Constants.NestedContentElementsTypeName)
+                .ToList();
+
+            if (!properties.Any()) return contentType;
+
+            //find blueprint for this contentType
+            var blueprint = blueprints
+                .SingleOrDefault(i => i
+                    .Root?
+                    .Element("Info")?
+                    .Element("ContentType")?
+                    .Value == contentType.Alias);
+
+            if (blueprint == null) return contentType;
+
+            //find modules set on blueprint for this contentType and this property
+            foreach (var property in properties)
+            {
+                var modules = JsonConvert.DeserializeObject<IEnumerable<Module>>(blueprint
+                        .Root?
+                        .Element("Properties")?
+                        .Element(property.Alias)?
+                        .Elements("Value")
+                        .FirstOrDefault()?
+                        .Value)
+                    .Select(c =>
+                    {
+                        c.ContentType = contentType;
+                        return c;
+                    })
+                    .ToList();
+
+                property.NestedContentElementsDocTypes = modules;
+            }
             return contentType;
         }
     }

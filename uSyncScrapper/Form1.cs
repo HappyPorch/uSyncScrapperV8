@@ -8,11 +8,11 @@ using System.Windows.Forms;
 using System.Xml.Linq;
 using Newtonsoft.Json;
 using RazorEngine.Templating;
+using uSyncScrapper.Builders;
 using uSyncScrapper.Context;
 using uSyncScrapper.Extensions;
 using uSyncScrapper.Models;
 using uSyncScrapper.Repositories;
-using uSyncScrapper.Mappers;
 
 namespace uSyncScrapper
 {
@@ -76,12 +76,12 @@ namespace uSyncScrapper
                 return new Tuple<IEnumerable<ContentType>, IEnumerable<Module>>(null, null);
             }
 
-            var contentTypes = contentTypeFiles.Map(dataTypeFiles, blueprintFiles);
+            var contentTypes = contentTypeFiles.Build(dataTypeFiles, blueprintFiles);
 
             foreach (var contentType in contentTypes)
             {
                 ComputeNestedContentProperties(contentType, dataTypeFiles);
-                ComputeNestedContentElementsProperties(contentType, dataTypeFiles, blueprintFiles);
+                //ComputeNestedContentElementsProperties(contentType, dataTypeFiles, blueprintFiles);
                 //ComputeTreePickerMaxItems(dataTypeDocuments, allProperties);
                 ComputeNotes(contentType, dataTypeFiles);
 
@@ -119,7 +119,7 @@ namespace uSyncScrapper
                     }
 
             var allModules = contentTypes
-                .SelectMany(i => i.PropertiesSelf)
+                .SelectMany(i => i.Properties)
                 .Where(i => i.NestedContentElementsDocTypes != null && i.NestedContentElementsDocTypes.Any())
                 .SelectMany(i => i.NestedContentElementsDocTypes)
                 .GroupBy(i => i.NcContentTypeAlias)
@@ -215,39 +215,6 @@ namespace uSyncScrapper
             }
         }
 
-        private void ComputeNestedContentElementsProperties(ContentType docType,
-            IEnumerable<XDocument> dataTypeDocuments, IEnumerable<XDocument> blueprintDocuments)
-        {
-            var properties = docType.PropertiesSelf
-                .Where(i => i.Type == Constants.NestedContentElementsTypeName);
-
-            if (!properties.Any()) return;
-
-            //find blueprint for this contenttype
-            var blueprint = blueprintDocuments
-                .Where(i => i
-                    .Root
-                    .Element("Info")?
-                    .Element("ContentType")?
-                    .Value == docType.Alias)
-                .SingleOrDefault();
-
-            if (blueprint == null) return;
-
-            //find modules set on blueprint for this contenttype and this property
-            foreach (var property in properties)
-            {
-                var modules = JsonConvert.DeserializeObject<IEnumerable<Module>>(blueprint
-                    .Root
-                    .Element("Properties")
-                    .Element(property.Alias)
-                    .Elements("Value")
-                    .FirstOrDefault()?
-                    .Value);
-
-                property.NestedContentElementsDocTypes = modules;
-            }
-        }
 
         private void ComputeNotes(ContentType docType, IEnumerable<XDocument> dataTypeDocuments)
         {
