@@ -45,7 +45,8 @@ namespace uSyncScrapper.Builders
                     .Root
                     ?.Element("Structure")
                     ?.Elements("ContentType")
-                    .Select(i => i.Value),
+                    .Select(i => i.Value)
+                    .ToList(),
 
                 Description = doc
                     .Root
@@ -58,7 +59,8 @@ namespace uSyncScrapper.Builders
                     .Element("Info")?
                     .Element("Compositions")?
                     .Elements("Composition")
-                    .Select(i => (string)i.Attribute("Key")),
+                    .Select(i => (string)i.Attribute("Key"))
+                    .ToList(),
 
                 TabsSelf = doc
                     .Root?
@@ -68,7 +70,8 @@ namespace uSyncScrapper.Builders
                     {
                         Caption = i.Element("Caption")?.Value,
                         SortOrder = int.Parse(i.Element("SortOrder")?.Value ?? string.Empty)
-                    }),
+                    })
+                    .ToList(),
 
                 PropertiesSelf = doc
                     .Root?
@@ -84,6 +87,7 @@ namespace uSyncScrapper.Builders
                         Type = i.Element("Type")?.Value,
                         Definition = i.Element("Definition")?.Value
                     })
+                    .ToList()
             };
         }
 
@@ -92,7 +96,8 @@ namespace uSyncScrapper.Builders
         {
             contentType.Compositions = contentType.CompositionKeys
                 .Select(i => compositions.Single(c => c.Key == i))
-                .Where(i => !Constants.CompositionAliasToIgnore.Contains(i.Alias));
+                .Where(i => !Constants.CompositionAliasToIgnore.Contains(i.Alias))
+                .ToList();
 
             return contentType;
         }
