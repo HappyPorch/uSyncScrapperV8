@@ -106,7 +106,7 @@ namespace uSyncScrapper.Builders
             IReadOnlyList<XDocument> dataTypes, IReadOnlyList<XDocument> blueprints, IReadOnlyList<ContentType> compositions)
         {
             contentType.Properties = contentType.PropertiesSelf
-                .Union(contentType.Compositions.SelectMany(c => c.PropertiesSelf))
+                .Union(contentType.Compositions.SelectMany(c => c.PropertiesSelf).Select(x => x.Clone() as DocumentTypeProperty))
                 .Select(p => new { Property = p, Tab = contentType.Tabs.Single(t => t.Caption == p.Tab) })
                 .OrderBy(i => i.Tab.SortOrder)
                 .ThenBy(i => i.Property.SortOrder)
