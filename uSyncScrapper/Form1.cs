@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using RazorEngine.Templating;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,8 +8,6 @@ using System.Net;
 using System.Text;
 using System.Windows.Forms;
 using System.Xml.Linq;
-using Newtonsoft.Json;
-using RazorEngine.Templating;
 using uSyncScrapper.Builders;
 using uSyncScrapper.Context;
 using uSyncScrapper.Extensions;
@@ -123,7 +123,17 @@ namespace uSyncScrapper
                 .Where(i => i.NestedContentElementsDocTypes != null && i.NestedContentElementsDocTypes.Any())
                 .SelectMany(i => i.NestedContentElementsDocTypes)
                 .GroupBy(i => i.NcContentTypeAlias)
-                .Select(g => g.First())
+                .Select(g =>
+                {
+                    var module = g.First();
+
+                    if (!string.IsNullOrEmpty(module.NcContentTypeAlias))
+                    {
+                        module.ContentType = contentTypes.FirstOrDefault(c => c.Alias == module.NcContentTypeAlias);
+                    }
+
+                    return module;
+                })
                 .OrderBy(i => i.Name)
                 .ToList();
 
